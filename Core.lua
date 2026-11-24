@@ -2091,18 +2091,40 @@ local function CreateManagerRow(f, slot)
 	row.Rename = IconButton(row, "Interface\\Buttons\\UI-GuildButton-PublicNote-Up", L.MENU_RENAME, row.Edit)
 	row.Rename:SetPoint("RIGHT", row.Remove, "LEFT", -4, 0)
 
-	-- Línea de arriba: nombre. Línea de abajo: zona y coordenadas.
+	-- Línea de arriba: nombre (izquierda) y zona con coordenadas (derecha). Debajo: descripción.
+	-- Zona y coordenadas a la derecha (antes de los iconos), ocupando lo que necesiten
+	row.Zone = row:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+	row.Zone:SetJustifyH("RIGHT")
+	row.Zone:SetWordWrap(false)
+
+	-- Nombre a la izquierda, hasta la zona (si no cabe, se corta con "…")
 	row.Name = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-	row.Name:SetPoint("TOPLEFT", row.Num, "TOPRIGHT", 8, 8)
-	row.Name:SetPoint("RIGHT", row.Rename, "LEFT", -8, 0)
 	row.Name:SetJustifyH("LEFT")
 	row.Name:SetWordWrap(false)
 
-	row.Zone = row:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-	row.Zone:SetPoint("TOPLEFT", row.Name, "BOTTOMLEFT", 0, -3)
-	row.Zone:SetPoint("RIGHT", row.Rename, "LEFT", -8, 0)
-	row.Zone:SetJustifyH("LEFT")
-	row.Zone:SetWordWrap(false)
+	-- Descripción: debajo del nombre, en una línea
+	row.Desc = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	row.Desc:SetPoint("TOPLEFT", row.Name, "BOTTOMLEFT", 0, -3)
+	row.Desc:SetPoint("RIGHT", row, "RIGHT", -46, 0)
+	row.Desc:SetJustifyH("LEFT")
+	row.Desc:SetWordWrap(false)
+	row.Desc:SetTextColor(0.75, 0.75, 0.75)
+
+	-- Con descripción: nombre y zona arriba, descripción debajo. Sin ella: centrados en la fila.
+	function row:Layout(hasDesc)
+		self.Zone:ClearAllPoints()
+		self.Name:ClearAllPoints()
+		if hasDesc then
+			self.Zone:SetPoint("TOPRIGHT", self, "TOPRIGHT", -46, -7)
+			self.Name:SetPoint("TOPLEFT", self, "TOPLEFT", 48, -4)
+		else
+			self.Zone:SetPoint("RIGHT", self, "RIGHT", -46, 0)
+			self.Name:SetPoint("LEFT", self, "LEFT", 48, 0)
+		end
+		self.Name:SetPoint("RIGHT", self.Zone, "LEFT", -10, 0)
+		self.Desc:SetShown(hasDesc)
+	end
+	row:Layout(false)
 
 	-- Clic: ir a la parada en el mapa. Clic derecho: menú (mover a otra ruta)
 	row:SetScript("OnClick", function(self, mouseButton)
@@ -2479,6 +2501,8 @@ local function CreateManager()
 				row.Num:SetText(i)
 				row.Name:SetText(st.name or "?")
 				row.Zone:SetText(string.format("%s (%.1f, %.1f)", st.zone or "?", (st.x or 0) * 100, (st.y or 0) * 100))
+				row.Desc:SetText(st.desc or "")
+				row:Layout(st.desc ~= nil)
 				SetButtonEnabled(row.Up, not self.filtering and i > 1)
 				SetButtonEnabled(row.Down, not self.filtering and i < #stops)
 				row:Show()
