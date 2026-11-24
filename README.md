@@ -15,7 +15,7 @@ Each place you mark is a **stop**: add it with a click, give it a name, and see 
 * **Stops on the world map**: add, move, rename and remove them with the mouse.
 * **Names**: each stop can have its own; drop a stop on a map icon and it takes the icon's name.
 * **Minimap**: stops also show while you walk; far-away ones sit on the edge, pointing the way.
-* **Compass**: an on-screen arrow with the next stop's name and distance.
+* **Compass**: an on-screen arrow with the next stop's name, distance and estimated time of arrival.
 * **Arrival message**: an on-screen banner, *"You have arrived at… · Next stop: …"*.
 * **Your corpse**: when you die and release your spirit, your body becomes the first stop; it goes away when you resurrect.
 * **Manage stops**: a window to search, reorder, rename and remove stops.
@@ -72,7 +72,7 @@ To move the button: **Shift + drag** (`/bridge button reset` puts it back).
 
 #### Compass and arrival
 
-The compass points in a straight line to the next stop (number 1) and shows its name, how many are left and the distance. Drag it to move it. Within 10 yards, the stop is removed, the message shows up and the compass moves on to the next stop. The compass is what detects your arrival: if it is turned off, stops stay in place.
+The compass points in a straight line to the next stop (number 1) and shows its name, how many are left, the distance and the estimated time of arrival (ETA), worked out from how fast you are getting closer; it is hidden while you are standing still or moving away. Drag it to move it. Within 10 yards, the stop is removed, the message shows up and the compass moves on to the next stop. The compass is what detects your arrival: if it is turned off, stops stay in place.
 
 #### Your corpse
 
@@ -155,7 +155,7 @@ Cada sitio que marcas es una **parada**: la pones con un clic, le das un nombre 
 * **Paradas en el mapa del mundo**: añadir, mover, renombrar y quitar con el ratón.
 * **Nombres**: cada parada puede tener el suyo; si pones la parada sobre un icono del mapa, toma su nombre.
 * **Minimapa**: las paradas también se ven al ir caminando; las lejanas se quedan en el borde, señalando hacia dónde están.
-* **Brújula**: flecha en pantalla con el nombre de la siguiente parada y la distancia.
+* **Brújula**: flecha en pantalla con el nombre de la siguiente parada, la distancia y el tiempo estimado de llegada.
 * **Aviso al llegar**: un cartel en pantalla, *"Has llegado a… · Siguiente parada: …"*.
 * **Tu cadáver**: al morir y liberar el espíritu, tu cuerpo pasa a ser la primera parada; se quita al resucitar.
 * **Gestionar paradas**: una ventana para buscar, ordenar, renombrar y quitar paradas.
@@ -212,7 +212,7 @@ Para mover el botón: **Mayús + arrastrar** (`/bridge button reset` lo devuelve
 
 #### Brújula y llegada
 
-La brújula apunta en línea recta a la siguiente parada (la número 1) y muestra su nombre, cuántas quedan y la distancia. Arrástrala para moverla. Cuando estás a menos de 10 yardas, la parada se quita, sale el aviso y la brújula pasa a la siguiente. Es la brújula la que detecta la llegada: si está desactivada, las paradas se quedan puestas.
+La brújula apunta en línea recta a la siguiente parada (la número 1) y muestra su nombre, cuántas quedan, la distancia y el tiempo estimado de llegada, calculado según lo rápido que te acercas; no aparece si estás parado o te alejas. Arrástrala para moverla. Cuando estás a menos de 10 yardas, la parada se quita, sale el aviso y la brújula pasa a la siguiente. Es la brújula la que detecta la llegada: si está desactivada, las paradas se quedan puestas.
 
 #### Tu cadáver
 
