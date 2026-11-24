@@ -89,7 +89,6 @@ local L = {
 
 	-- Importar una lista de /way
 	IMPORT_OPEN = "Import stops",
-	IMPORT_EXPORT = "Import / Export",
 	IMPORT_TITLE_ROUTE = "Import stops into “%s”",
 	IMPORT_TITLE_NEW = "Import stops into a new route",
 	IMPORT_AS_NEW = "Import as a new route:",
@@ -300,7 +299,6 @@ if locale == "esES" or locale == "esMX" then
 	L.MENU_COPY_TO = "Copiar a"
 
 	L.IMPORT_OPEN = "Importar paradas"
-	L.IMPORT_EXPORT = "Importar / Exportar"
 	L.IMPORT_TITLE_ROUTE = "Importar paradas en «%s»"
 	L.IMPORT_TITLE_NEW = "Importar paradas en una ruta nueva"
 	L.IMPORT_AS_NEW = "Importar como ruta nueva:"
