@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.0](https://github.com/calderon/bridge/compare/v1.0.0...v1.1.0) (2026-11-24)
+
+
+### Features
+
+* **compass:** show estimated time of arrival ([e3da569](https://github.com/calderon/bridge/commit/e3da5696ed2520b39071d5e636f6ac631d996d5f)), closes [#1](https://github.com/calderon/bridge/issues/1)
+* **way:** import a pasted list of /way lines as stops ([ad4ab31](https://github.com/calderon/bridge/commit/ad4ab31278ed9029586738607ab82fded9053106)), closes [#10](https://github.com/calderon/bridge/issues/10)
+
 ## 1.0.0 (2026-11-23)
 
 First public release.
