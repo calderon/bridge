@@ -6,36 +6,55 @@
 
 ## English
 
-**Bridge** is a **waypoint** addon: you mark the places you want to go on the map, and Bridge points you towards them.
+**Bridge** is an addon for **building routes** on the map (*waypoints*): you mark the places you want to go, and Bridge takes you through them, one after another.
 
-Each place you mark is a **stop**: add it with a click, give it a name, and see it on the map and the minimap with its number. An optional on-screen arrow shows you which way to go and how far it is. When you get there, the arrow moves on to the next one; your stops stay saved.
+Each place you mark is a **stop**: add it with a click, give it a name and a description, and see it on the map and the minimap with its number. An on-screen compass shows you which way to go, how far it is and when you'll get there; when you arrive, it moves on to the next stop.
+
+Stops are grouped into **routes**. The **Current route** is the one you are walking right now. Your **saved routes** (a herbalism circuit, the quests of a zone, your trainers…) stay saved and never change while you walk them: load one into the Current route whenever you want, as many times as you like, and share it with all your characters if you wish.
 
 ### ✨ Features
 
 * **Stops on the world map**: add, move, rename and remove them with the mouse.
+* **Routes**: save as many as you like and load one into the Current route with a click; walking a route never changes the saved one. The stops you reach turn grey until you restart the route.
+* **Shared routes**: share a saved route with all the characters of your account; each one walks it on its own.
 * **Descriptions**: give a stop an optional description; it shows in its tooltip on the map and the minimap.
 * **Names**: each stop can have its own; drop a stop on a map icon and it takes the icon's name.
 * **Minimap**: stops also show while you walk; far-away ones sit on the edge, pointing the way.
 * **Compass**: an on-screen arrow with the next stop's name, distance and estimated time of arrival.
 * **Arrival notice**: an on-screen banner, *"You have arrived at… · Next stop: …"*, with a line in chat and a sound. It can be turned off.
-* **Your corpse**: when you die and release your spirit, your body becomes the first stop; it goes away when you resurrect.
-* **Manage routes**: a window with your routes and their stops: search, reorder, rename and remove stops.
+* **Your corpse**: when you die and release your spirit, the compass takes you to your body first; the stop goes away when you resurrect.
+* **Manage routes**: a window with all your routes and their stops: create, rename, duplicate, delete, search, reorder, and move or copy stops between routes.
 * **Sharing**: send a stop to your party, raid or guild; players with Bridge can add it with one click.
 * **`/way` commands**: type coordinates in chat and they become stops.
 * **Import stops**: paste a list of `/way` lines from a guide or website and they all become stops, in order.
 * **Yards or meters**, your choice.
-* **Stops are kept** between sessions.
+* **Everything is saved** between sessions.
 
 ---
 
 ### ⚙️ Installation
 
+**With the CurseForge app (recommended):** search for **Bridge** in the CurseForge app, under World of Warcraft (WoW Forever), and click **Install**. The app keeps it up to date.
+
+**By hand:**
+
 1. Close the game.
-2. Copy the `Bridge` folder into `World of Warcraft/<your version>/Interface/AddOns/`. *(On WoW Forever, `<your version>` is the Forever folder, for example `_forever_`).*
+2. Download the zip from the CurseForge page and copy the `Bridge` folder into `World of Warcraft/<your version>/Interface/AddOns/`. *(On WoW Forever, `<your version>` is the Forever folder, for example `_forever_`).*
    * **On Mac**, the folder is usually in `/Applications/World of Warcraft/`. If you can't find it: Battle.net app → game's gear icon → **Show in Finder**.
 3. Start the game. The chat should show: `Bridge: Version … loaded`.
 
 > **Note:** if the game flags it as "out of date", type `/dump select(4, GetBuildInfo())` and put that number on the `## Interface:` line of the `Bridge.toc` file.
+
+---
+
+### 🔄 Migration from v1
+
+Version 2 organizes stops into routes. When you update from 1.x, **you don't lose anything**:
+
+* Your stops become a saved route called **"My route"**, which is also loaded into the **Current route**, so you carry on where you were.
+* The **"Keep stops between sessions"** option is gone: routes are always saved. To start from scratch, empty the Current route (Bridge button → **Empty Current route**).
+* "Manage stops" is now **Manage routes**, and "Clear stops" is now **Empty Current route**.
+* Your stops are converted the first time you log in with each character. If you go back to a 1.x version afterwards, it won't show them.
 
 ---
 
@@ -47,7 +66,7 @@ Open the world map (**M** key).
 |---|---|---|
 | Add a stop | **Alt + click** on the map | **⌥ Option + click** |
 | Add a stop named after a map icon *(wait for its tooltip)* | **Alt + click** on the icon | **⌥ + click** on the icon |
-| Go only to that point (clears the other stops) | **Alt + Shift + click** | **⌥ + ⇧ + click** |
+| Go only to that point (empties the Current route) | **Alt + Shift + click** | **⌥ + ⇧ + click** |
 | Remove a stop | **Alt + click** on it | **⌥ + click** on it |
 | Move a stop | **Alt + drag** | **⌥ + drag** |
 | Stop menu (edit name and description, share, remove) | **Alt + right-click** | **⌥ + two-finger click** |
@@ -108,10 +127,10 @@ Almost everything is done from the map and the button.
 | `/bridge button` | Show or hide the map button. |
 | `/bridge button reset` | Put the button back in place. |
 | `/bridge version` | Check the installed version. |
-| `/way zone x y name` | Add a stop (e.g. `/way Elwynn Forest 42 65 Goldshire`). |
-| `/way reset all` | Clear all stops. |
-| `/way reset <zone>` | Clear the stops in that zone. |
-| `/way reset not <zone>` | Clear the stops in other zones. |
+| `/way zone x y name` | Add a stop to the Current route (e.g. `/way Elwynn Forest 42 65 Goldshire`). |
+| `/way reset all` | Empty the Current route. |
+| `/way reset <zone>` | Remove the Current route's stops in that zone. |
+| `/way reset not <zone>` | Remove the Current route's stops in other zones. |
 | `/cway` | The closest stop becomes the next one. |
 
 ---
@@ -122,12 +141,12 @@ Bridge works on its own, but it gets along with these addons:
 
 * **Leatrix Maps**: Bridge works on the world map, so it works just the same with Leatrix Maps' enhanced map.
 * **Questie**: right-click a quest in the tracker (or one of its objectives):
-  * **Set route**: clears your stops and leaves the nearest objective as the only stop.
-  * **Add as stop**: adds the nearest objective at the end of your stops.
-* **AzerothGPS**: every change to your stops updates its route right away; it follows the roads, is drawn on the minimap and gives directions.
+  * **Set route**: empties the Current route and leaves the nearest objective as its only stop.
+  * **Add as stop**: adds the nearest objective at the end of the Current route.
+* **AzerothGPS**: every change to the Current route updates its route right away; it follows the roads, is drawn on the minimap and gives directions.
   * With AzerothGPS running, Bridge draws nothing on the minimap or in its windows: AzerothGPS already marks the stops. It is also the one that detects when you arrive.
-  * ⚠️ **Limitation:** information only flows from Bridge to AzerothGPS. AzerothGPS does not let other addons read its route, so if you remove a stop from the AzerothGPS map, Bridge won't know. Always remove them from the world map.
-* **TomTom**: using it together with Bridge is not recommended, because you would see points twice and each would keep its own list. You don't need it either: many addons (leveling guides, rare scanners…) send their points to TomTom. When TomTom is not enabled, Bridge picks up those points instead and turns them into stops, so those addons keep working just the same.
+  * ⚠️ **Limitation:** information only flows from Bridge to AzerothGPS. AzerothGPS does not let other addons read its route, so if you remove a stop from the AzerothGPS map, Bridge won't know. Always remove them from the world map or the Manage routes window.
+* **TomTom**: using it together with Bridge is not recommended, because you would see points twice and each would keep its own list. You don't need it either: many addons (leveling guides, rare scanners…) send their points to TomTom. When TomTom is not enabled, Bridge picks up those points instead and adds them to the Current route, so those addons keep working just the same.
 
 ---
 
@@ -140,16 +159,17 @@ Bridge works on its own, but it gets along with these addons:
 
 ### 🧩 For developers
 
-* **API**: Bridge has a public API, `BridgeAPI`, so other addons or your macros (`/run`) can create and manage stops and get notified of changes. It is documented in [API.md](API.md).
+* **API**: Bridge has a public API, `BridgeAPI`, so other addons or your macros (`/run`) can create and manage stops, work with routes (version 2) and get notified of changes. It is documented in [API.md](https://github.com/calderon/bridge/blob/main/API.md).
 * **Diagnostics**: `/bridge diag` shows the addon's status; `/bridge debug` turns on debug messages; `/bridge copy` opens a window with the latest messages, already selected for copying (**Ctrl + C**, or **⌘ + C** on Mac).
-* **Saved data**: `World of Warcraft/<your version>/WTF/Account/<ACCOUNT>/<realm>/<character>/SavedVariables/Bridge.lua`. The game writes it when you reload (`/reload`) or log out.
+* **Saved data**: `World of Warcraft/<your version>/WTF/Account/<ACCOUNT>/<realm>/<character>/SavedVariables/Bridge.lua` (shared routes: `World of Warcraft/<your version>/WTF/Account/<ACCOUNT>/SavedVariables/Bridge.lua`). The game writes it when you reload (`/reload`) or log out.
 * **License**: Bridge is *All Rights Reserved*: its code may not be copied, modified or re-uploaded without permission. Using the public API from your own addon is free and needs no permission.
 
 ---
 
-### 🐞 Feedback and bug reports
+### 🐞 Contact and bug reports
 
-Found a bug or have an idea? Leave a comment on the CurseForge project page. For bugs, please include the output of `/bridge diag` (it opens in a window, ready to copy).
+* **Bugs**: please report them on GitHub, at [github.com/calderon/bridge/issues](https://github.com/calderon/bridge/issues). Tell us what you did and what happened, and include the output of `/bridge diag` (it opens in a window, ready to copy).
+* **Ideas and comments**: open an issue there too, or leave a comment on the CurseForge project page.
 
 <br>
 
@@ -160,36 +180,55 @@ Found a bug or have an idea? Leave a comment on the CurseForge project page. For
 ## Español
 
 
-**Bridge** es un addon de **puntos de ruta** (*waypoints*): marcas en el mapa los sitios a los que quieres ir y Bridge te señala hacia ellos.
+**Bridge** es un addon para **crear rutas** en el mapa (*waypoints*): marcas los sitios a los que quieres ir y Bridge te lleva por ellos, uno detrás de otro.
 
-Cada sitio que marcas es una **parada**: la pones con un clic, le das un nombre y la ves en el mapa y en el minimapa con su número. Una flecha opcional en pantalla te indica hacia dónde ir y a qué distancia está. Al llegar, la flecha pasa a la siguiente; tus paradas siguen guardadas.
+Cada sitio que marcas es una **parada**: la pones con un clic, le das un nombre y una descripción, y la ves en el mapa y en el minimapa con su número. Una brújula en pantalla te indica hacia dónde ir, a qué distancia está y cuándo llegarás; al llegar, pasa a la siguiente parada.
+
+Las paradas se agrupan en **rutas**. La **Ruta actual** es la que estás recorriendo ahora. Tus **rutas guardadas** (un circuito de herboristería, las misiones de una zona, tus instructores…) se quedan guardadas y no cambian al recorrerlas: carga una en la Ruta actual cuando quieras, tantas veces como quieras, y compártela con todos tus personajes si te apetece.
 
 ### ✨ Funciones
 
 * **Paradas en el mapa del mundo**: añadir, mover, renombrar y quitar con el ratón.
+* **Rutas**: guarda todas las que quieras y carga una en la Ruta actual con un clic; recorrer una ruta nunca cambia la guardada. Las paradas a las que llegas se ponen en gris hasta que reinicias la ruta.
+* **Rutas compartidas**: comparte una ruta guardada con todos los personajes de tu cuenta; cada uno la recorre por su cuenta.
 * **Descripciones**: añade a una parada una descripción opcional; sale en su tooltip del mapa y del minimapa.
 * **Nombres**: cada parada puede tener el suyo; si pones la parada sobre un icono del mapa, toma su nombre.
 * **Minimapa**: las paradas también se ven al ir caminando; las lejanas se quedan en el borde, señalando hacia dónde están.
 * **Brújula**: flecha en pantalla con el nombre de la siguiente parada, la distancia y el tiempo estimado de llegada.
 * **Aviso al llegar**: un cartel en pantalla, *"Has llegado a… · Siguiente parada: …"*, con una línea en el chat y un sonido. Se puede desactivar.
-* **Tu cadáver**: al morir y liberar el espíritu, tu cuerpo pasa a ser la primera parada; se quita al resucitar.
-* **Gestionar rutas**: una ventana con tus rutas y sus paradas: buscar, ordenar, renombrar y quitar paradas.
+* **Tu cadáver**: al morir y liberar el espíritu, la brújula te lleva primero a tu cuerpo; la parada se quita al resucitar.
+* **Gestionar rutas**: una ventana con todas tus rutas y sus paradas: crear, renombrar, duplicar, borrar, buscar, ordenar, y mover o copiar paradas entre rutas.
 * **Compartir**: manda una parada a tu grupo, banda o hermandad; quien tenga Bridge puede añadirla con un clic.
 * **Comandos `/way`**: escribe coordenadas en el chat y se convierten en paradas.
 * **Importar paradas**: pega una lista de líneas `/way` de una guía o una web y todas se convierten en paradas, en orden.
 * **Yardas o metros**, a tu elección.
-* **Las paradas se guardan** entre sesiones.
+* **Todo se guarda** entre sesiones.
 
 ---
 
 ### ⚙️ Instalación
 
+**Con la app de CurseForge (recomendado):** busca **Bridge** en la app de CurseForge, dentro de World of Warcraft (WoW Forever), y pulsa **Instalar**. La app lo mantiene al día.
+
+**A mano:**
+
 1. Cierra el juego.
-2. Copia la carpeta `Bridge` en `World of Warcraft/<tu versión>/Interface/AddOns/`. *(En WoW Forever, `<tu versión>` es la carpeta de Forever, por ejemplo `_forever_`).*
+2. Descarga el zip desde la página de CurseForge y copia la carpeta `Bridge` en `World of Warcraft/<tu versión>/Interface/AddOns/`. *(En WoW Forever, `<tu versión>` es la carpeta de Forever, por ejemplo `_forever_`).*
    * **En Mac**, la carpeta suele estar en `/Aplicaciones/World of Warcraft/`. Si no la encuentras: app de Battle.net → rueda dentada del juego → **Mostrar en el Finder**.
 3. Abre el juego. En el chat debe aparecer: `Bridge: Versión … cargada`.
 
 > **Nota:** si el juego lo marca como "desactualizado", escribe `/dump select(4, GetBuildInfo())` y pon ese número en la línea `## Interface:` del archivo `Bridge.toc`.
+
+---
+
+### 🔄 Migración desde la v1
+
+La versión 2 organiza las paradas en rutas. Al actualizar desde la 1.x **no pierdes nada**:
+
+* Tus paradas pasan a una ruta guardada llamada **"Mi ruta"**, que además se carga en la **Ruta actual**, así que sigues por donde ibas.
+* Desaparece la opción **"Guardar paradas entre sesiones"**: las rutas se guardan siempre. Para empezar de cero, vacía la Ruta actual (botón Bridge → **Vaciar Ruta actual**).
+* "Gestionar paradas" ahora es **Gestionar rutas**, y "Borrar paradas" ahora es **Vaciar Ruta actual**.
+* Tus paradas se convierten la primera vez que entras con cada personaje. Si después vuelves a una versión 1.x, no las verá.
 
 ---
 
@@ -201,7 +240,7 @@ Abre el mapa del mundo (tecla **M**).
 |---|---|---|
 | Añadir una parada | **Alt + clic** en el mapa | **⌥ Opción + clic** |
 | Añadir una parada con el nombre de un icono *(espera a que salga su tooltip)* | **Alt + clic** sobre el icono | **⌥ + clic** sobre el icono |
-| Ir solo a ese punto (borra las demás paradas) | **Alt + Mayús + clic** | **⌥ + ⇧ + clic** |
+| Ir solo a ese punto (vacía la Ruta actual) | **Alt + Mayús + clic** | **⌥ + ⇧ + clic** |
 | Quitar una parada | **Alt + clic** sobre ella | **⌥ + clic** sobre ella |
 | Mover una parada | **Alt + arrastrar** | **⌥ + arrastrar** |
 | Menú de la parada (editar nombre y descripción, compartir, quitar) | **Alt + clic derecho** | **⌥ + clic con dos dedos** |
@@ -262,10 +301,10 @@ Casi todo se hace desde el mapa y el botón. Los comandos se escriben siempre en
 | `/bridge button` | Mostrar u ocultar el botón del mapa. |
 | `/bridge button reset` | Devolver el botón a su sitio. |
 | `/bridge version` | Ver la versión instalada. |
-| `/way zona x y nombre` | Añadir una parada (p. ej. `/way Bosque de Elwynn 42 65 Villadorada`). |
-| `/way reset all` | Borrar todas las paradas. |
-| `/way reset <zona>` | Borrar las paradas de esa zona. |
-| `/way reset not <zona>` | Borrar las paradas de las demás zonas. |
+| `/way zona x y nombre` | Añadir una parada a la Ruta actual (p. ej. `/way Bosque de Elwynn 42 65 Villadorada`). |
+| `/way reset all` | Vaciar la Ruta actual. |
+| `/way reset <zona>` | Quitar las paradas de la Ruta actual en esa zona. |
+| `/way reset not <zona>` | Quitar las paradas de la Ruta actual en las demás zonas. |
 | `/cway` | La parada más cercana pasa a ser la siguiente. |
 
 ---
@@ -276,12 +315,12 @@ Bridge funciona solo, pero se lleva bien con estos addons:
 
 * **Leatrix Maps**: Bridge trabaja sobre el mapa del mundo, así que funciona igual con el mapa mejorado de Leatrix Maps.
 * **Questie**: haz clic derecho en una misión del rastreador (o en uno de sus objetivos):
-  * **Establecer ruta**: borra tus paradas y deja el objetivo más cercano como única parada.
-  * **Añadir como parada**: añade el objetivo más cercano al final de tus paradas.
-* **AzerothGPS**: cada cambio en tus paradas actualiza al momento su ruta, que va por carreteras, se dibuja en el minimapa y te da indicaciones.
+  * **Establecer ruta**: vacía la Ruta actual y deja el objetivo más cercano como su única parada.
+  * **Añadir como parada**: añade el objetivo más cercano al final de la Ruta actual.
+* **AzerothGPS**: cada cambio en la Ruta actual actualiza al momento su ruta, que va por carreteras, se dibuja en el minimapa y te da indicaciones.
   * Con AzerothGPS activo, Bridge no dibuja nada en el minimapa ni en sus ventanas: AzerothGPS ya marca las paradas. También es él quien detecta que has llegado.
-  * ⚠️ **Limitación:** la información solo va de Bridge a AzerothGPS. AzerothGPS no deja que otros addons lean su ruta, así que si quitas una parada desde el mapa de AzerothGPS, Bridge no se entera. Quítalas siempre desde el mapa del mundo.
-* **TomTom**: no se recomienda usarlo junto con Bridge, porque verías los puntos repetidos y cada uno llevaría su propia lista. Tampoco hace falta: muchos addons (guías de subida de nivel, buscadores de raros…) mandan sus puntos a TomTom. Si TomTom no está activado, Bridge recoge esos puntos en su lugar y los convierte en paradas, así que esos addons siguen funcionando igual.
+  * ⚠️ **Limitación:** la información solo va de Bridge a AzerothGPS. AzerothGPS no deja que otros addons lean su ruta, así que si quitas una parada desde el mapa de AzerothGPS, Bridge no se entera. Quítalas siempre desde el mapa del mundo o desde la ventana Gestionar rutas.
+* **TomTom**: no se recomienda usarlo junto con Bridge, porque verías los puntos repetidos y cada uno llevaría su propia lista. Tampoco hace falta: muchos addons (guías de subida de nivel, buscadores de raros…) mandan sus puntos a TomTom. Si TomTom no está activado, Bridge recoge esos puntos en su lugar y los añade a la Ruta actual, así que esos addons siguen funcionando igual.
 
 ---
 
@@ -294,13 +333,14 @@ Bridge funciona solo, pero se lleva bien con estos addons:
 
 ### 🧩 Para desarrolladores
 
-* **API**: Bridge tiene una API pública, `BridgeAPI`, para que otros addons o tus macros (`/run`) creen y gestionen paradas y se enteren de sus cambios. Está documentada en [API.md](API.md).
+* **API**: Bridge tiene una API pública, `BridgeAPI`, para que otros addons o tus macros (`/run`) creen y gestionen paradas, trabajen con rutas (versión 2) y se enteren de sus cambios. Está documentada en [API.md](https://github.com/calderon/bridge/blob/main/API.md).
 * **Diagnóstico**: `/bridge diag` muestra el estado del addon; `/bridge debug` activa mensajes de depuración; `/bridge copy` abre una ventana con los últimos mensajes, ya seleccionados para copiarlos (**Ctrl + C**, o **⌘ + C** en Mac).
-* **Datos guardados**: `World of Warcraft/<tu versión>/WTF/Account/<CUENTA>/<servidor>/<personaje>/SavedVariables/Bridge.lua`. El juego lo escribe al recargar (`/reload`) o al salir.
+* **Datos guardados**: `World of Warcraft/<tu versión>/WTF/Account/<CUENTA>/<servidor>/<personaje>/SavedVariables/Bridge.lua` (rutas compartidas: `World of Warcraft/<tu versión>/WTF/Account/<CUENTA>/SavedVariables/Bridge.lua`). El juego lo escribe al recargar (`/reload`) o al salir.
 * **Licencia**: Bridge es *All Rights Reserved* (todos los derechos reservados): su código no se puede copiar, modificar ni volver a subir sin permiso. Usar la API pública desde tu propio addon es libre y no necesita permiso.
 
 ---
 
-### 🐞 Comentarios y errores
+### 🐞 Contacto y errores
 
-¿Has encontrado un error o tienes una idea? Déjalo en los comentarios de la página del proyecto en CurseForge. Si es un error, incluye lo que muestra `/bridge diag` (sale en una ventana, listo para copiar).
+* **Errores**: repórtalos en GitHub, en [github.com/calderon/bridge/issues](https://github.com/calderon/bridge/issues). Cuenta qué hiciste y qué pasó, e incluye lo que muestra `/bridge diag` (sale en una ventana, listo para copiar).
+* **Ideas y comentarios**: abre también una issue allí, o déjalo en los comentarios de la página del proyecto en CurseForge.

@@ -4,7 +4,7 @@
 
 ## Español
 
-Bridge ofrece una API para que otros addons (o tus macros con `/run`) puedan crear y gestionar paradas. Está en la tabla global **`BridgeAPI`**.
+Bridge ofrece una API para que otros addons (o tus macros con `/run`) puedan crear y gestionar paradas y rutas. Está en la tabla global **`BridgeAPI`**.
 
 ### Antes de usarla
 
@@ -30,7 +30,7 @@ Una parada devuelta por la API tiene estos campos:
 | Campo | Qué es |
 |---|---|
 | `id` | Identificador fijo |
-| `index` | Posición en la ruta (1 = la primera) |
+| `index` | Posición en la Ruta actual (1 = la primera) |
 | `name` | Nombre |
 | `zone` | Nombre de la zona |
 | `mapID`, `x`, `y` | Zona y coordenadas (0–1) |
@@ -53,7 +53,7 @@ Una ruta guardada devuelta por la API (versión 2) tiene estos campos:
 
 | Función | Devuelve | Qué hace |
 |---|---|---|
-| `BridgeAPI.AddStop(mapID, x, y [, opts])` | `id` o `nil` | Añade una parada al final de la ruta |
+| `BridgeAPI.AddStop(mapID, x, y [, opts])` | `id` o `nil` | Añade una parada al final de la Ruta actual |
 | `BridgeAPI.RouteTo(mapID, x, y [, opts])` | `id` o `nil` | Vacía la Ruta actual y deja esta parada como única (tu cadáver se queda) |
 | `BridgeAPI.RemoveStop(id)` | `true`/`false` | Quita una parada |
 | `BridgeAPI.ClearStops()` | — | Vacía la Ruta actual (tu cadáver se queda) |
@@ -61,7 +61,7 @@ Una ruta guardada devuelta por la API (versión 2) tiene estos campos:
 | `BridgeAPI.MoveStop(id, mapID, x, y)` | `true`/`false` | Cambia la posición en el mapa |
 | `BridgeAPI.ReorderStop(id, posición)` | `true`/`false` | Cambia su lugar en la ruta (1 = la primera) |
 | `BridgeAPI.GetStop(id)` | parada o `nil` | Una parada |
-| `BridgeAPI.GetStops()` | lista | Todas, en el orden de la ruta |
+| `BridgeAPI.GetStops()` | lista | Las de la Ruta actual, en su orden |
 | `BridgeAPI.ShowStop(id)` | `true`/`false` | Abre el mapa del mundo en la parada y la hace parpadear |
 | `BridgeAPI.GetDistance(id)` | yardas o `nil` | Distancia en línea recta desde el jugador. Siempre en yardas, aunque el jugador haya elegido metros. `nil` si no se puede saber (otro continente, mazmorra…) |
 | `BridgeAPI.HasAzerothGPS()` | `true`/`false` | Si las paradas se convierten en ruta |
@@ -79,7 +79,7 @@ Una ruta guardada devuelta por la API (versión 2) tiene estos campos:
 |---|---|
 | `name` | Nombre de la parada. Si no se indica, el de la zona. |
 | `description` | Descripción opcional; sale en el tooltip de la parada |
-| `exclusive` | `true` para borrar la ruta y dejar solo esta (`RouteTo` lo hace siempre) |
+| `exclusive` | `true` para vaciar la Ruta actual y dejar solo esta, salvo tu cadáver (`RouteTo` lo hace siempre) |
 | `source` | Texto que identifica quién la añade (por ejemplo, el nombre de tu addon) |
 | `silent` | `true` para que Bridge no escriba "Parada añadida" en el chat |
 
@@ -96,7 +96,7 @@ Las paradas añadidas por la API **nunca** muestran la cajita para poner nombre.
 | `STOP_CHANGED` | Se renombra, cambia su descripción o se mueve | Con los datos nuevos |
 | `STOP_REACHED` | Se llega a una parada (no se quita: queda marcada como alcanzada) | La alcanzada (`reached = true`) |
 | `STOPS_REORDERED` | Cambia el orden | — |
-| `STOPS_CLEARED` | Se borran todas | — |
+| `STOPS_CLEARED` | Se vacía la Ruta actual | — |
 | `ACTIVE_ROUTE_CHANGED` | Se carga una ruta guardada en la Ruta actual (sus paradas pasan a ser las de la API) | `{ id, name }` de la ruta cargada |
 
 `dueño` identifica a quien escucha (por ejemplo, el nombre de tu addon). Hay una función por dueño y evento: registrar otra la sustituye.
@@ -118,6 +118,13 @@ if stops[1] then BridgeAPI.ReorderStop(stops[1].id, #stops) end
 BridgeAPI.RegisterCallback("MiAddon", "STOP_ADDED", function(event, stop)
     print("Nueva parada:", stop.name, stop.zone)
 end)
+
+-- Cargar en la Ruta actual la ruta guardada "Herboristería" (versión 2)
+if BridgeAPI.version >= 2 then
+    for _, route in ipairs(BridgeAPI.GetRoutes()) do
+        if route.name == "Herboristería" then BridgeAPI.LoadRoute(route.id) end
+    end
+end
 ```
 
 Desde el chat: `/run BridgeAPI.RouteTo(1429, 0.42, 0.65, {name = "Villadorada"})`
@@ -127,7 +134,7 @@ Desde el chat: `/run BridgeAPI.RouteTo(1429, 0.42, 0.65, {name = "Villadorada"})
 <a name="english"></a>
 ## English
 
-Bridge offers an API so that other addons (or your `/run` macros) can create and manage stops. It lives in the global table **`BridgeAPI`**.
+Bridge offers an API so that other addons (or your `/run` macros) can create and manage stops and routes. It lives in the global table **`BridgeAPI`**.
 
 ### Before using it
 
@@ -153,7 +160,7 @@ A stop returned by the API has these fields:
 | Field | Meaning |
 |---|---|
 | `id` | Fixed identifier |
-| `index` | Position in the route (1 = first) |
+| `index` | Position in the Current route (1 = first) |
 | `name` | Name |
 | `zone` | Zone name |
 | `mapID`, `x`, `y` | Zone and coordinates (0–1) |
@@ -176,7 +183,7 @@ A saved route returned by the API (version 2) has these fields:
 
 | Function | Returns | What it does |
 |---|---|---|
-| `BridgeAPI.AddStop(mapID, x, y [, opts])` | `id` or `nil` | Adds a stop at the end of the route |
+| `BridgeAPI.AddStop(mapID, x, y [, opts])` | `id` or `nil` | Adds a stop at the end of the Current route |
 | `BridgeAPI.RouteTo(mapID, x, y [, opts])` | `id` or `nil` | Empties the Current route and leaves this as the only stop (your corpse stays) |
 | `BridgeAPI.RemoveStop(id)` | `true`/`false` | Removes a stop |
 | `BridgeAPI.ClearStops()` | — | Empties the Current route (your corpse stays) |
@@ -184,7 +191,7 @@ A saved route returned by the API (version 2) has these fields:
 | `BridgeAPI.MoveStop(id, mapID, x, y)` | `true`/`false` | Changes its position on the map |
 | `BridgeAPI.ReorderStop(id, position)` | `true`/`false` | Changes its place in the route (1 = first) |
 | `BridgeAPI.GetStop(id)` | stop or `nil` | One stop |
-| `BridgeAPI.GetStops()` | list | All of them, in route order |
+| `BridgeAPI.GetStops()` | list | The Current route's stops, in order |
 | `BridgeAPI.ShowStop(id)` | `true`/`false` | Opens the world map at the stop and flashes it |
 | `BridgeAPI.GetDistance(id)` | yards or `nil` | Straight-line distance from the player. Always in yards, even if the player chose meters. `nil` if it can't be known (another continent, a dungeon…) |
 | `BridgeAPI.HasAzerothGPS()` | `true`/`false` | Whether stops become a route |
@@ -202,7 +209,7 @@ A saved route returned by the API (version 2) has these fields:
 |---|---|
 | `name` | Stop name. If not given, the zone name. |
 | `description` | Optional description; shown in the stop's tooltip |
-| `exclusive` | `true` to clear the route and keep only this one (`RouteTo` always does) |
+| `exclusive` | `true` to empty the Current route and keep only this one, except your corpse (`RouteTo` always does) |
 | `source` | Text identifying who adds it (for example, your addon's name) |
 | `silent` | `true` so Bridge does not print "Stop added" in chat |
 
@@ -219,7 +226,7 @@ Stops added through the API **never** show the naming box.
 | `STOP_CHANGED` | A stop is renamed, its description changes, or it is moved | With the new data |
 | `STOP_REACHED` | A stop is reached (it is not removed: it is marked as reached) | The reached one (`reached = true`) |
 | `STOPS_REORDERED` | The order changes | — |
-| `STOPS_CLEARED` | All stops are cleared | — |
+| `STOPS_CLEARED` | The Current route is emptied | — |
 | `ACTIVE_ROUTE_CHANGED` | A saved route is loaded into the Current route (its stops become the API's stops) | `{ id, name }` of the loaded route |
 
 `owner` identifies the listener (for example, your addon's name). There is one function per owner and event: registering another one replaces it.
@@ -241,6 +248,13 @@ if stops[1] then BridgeAPI.ReorderStop(stops[1].id, #stops) end
 BridgeAPI.RegisterCallback("MyAddon", "STOP_ADDED", function(event, stop)
     print("New stop:", stop.name, stop.zone)
 end)
+
+-- Load the saved route "Herbalism" into the Current route (version 2)
+if BridgeAPI.version >= 2 then
+    for _, route in ipairs(BridgeAPI.GetRoutes()) do
+        if route.name == "Herbalism" then BridgeAPI.LoadRoute(route.id) end
+    end
+end
 ```
 
 From chat: `/run BridgeAPI.RouteTo(1429, 0.42, 0.65, {name = "Goldshire"})`
