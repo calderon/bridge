@@ -2479,7 +2479,9 @@ local function CreateRouteRow(f, slot)
 			tex:SetVertexColor(1, 0.85, 0.1)
 			tex:SetAlpha(1)
 		elseif DB.loadedRoute == route.id then
-			tex:SetVertexColor(0.3, 1, 0.3)
+			-- Verde intenso: el icono en su color (sin pasar a gris) teñido de verde
+			tex:SetDesaturated(false)
+			tex:SetVertexColor(0.25, 1, 0.25)
 			tex:SetAlpha(1)
 		else
 			tex:SetVertexColor(1, 1, 1)
