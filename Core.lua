@@ -869,19 +869,23 @@ local function UniqueRouteName(name, except)
 end
 
 -- Ruta nueva, vacía (no se activa)
-local function CreateRoute(name)
+local function CreateRoute(name, desc)
 	local route = NewRoute(UniqueRouteName(name))
+	route.desc = CleanName(desc)
 	Print(L.ROUTE_CREATED:format(route.name))
 	return route
 end
 
 -- Cambiar el nombre de una ruta (sin repetir el de otra)
-local function RenameRoute(route, name)
+-- Cambiar el nombre (sin repetir el de otra ruta) y la descripción de una ruta guardada
+local function RenameRoute(route, name, desc)
 	if not (route and name) or route.quick then return end
 	name = UniqueRouteName(name, route)
-	if name == route.name then return end
-	route.name = name
-	Print(L.ROUTE_RENAMED:format(name))
+	desc = CleanName(desc)
+	local nameChanged, descChanged = name ~= route.name, desc ~= route.desc
+	if not nameChanged and not descChanged then return end
+	route.name, route.desc = name, desc
+	Print((nameChanged and L.ROUTE_RENAMED or L.ROUTE_DESC_CHANGED):format(name))
 	return true
 end
 
@@ -935,6 +939,7 @@ end
 local function DuplicateRoute(route)
 	if not route then return end
 	local copy = NewRoute(UniqueRouteName(L.ROUTE_COPY_NAME:format(route.name or "?")))
+	copy.desc = route.desc
 	for _, st in ipairs(route.stops) do
 		if not st.corpse then
 			local new = {}
@@ -2532,6 +2537,16 @@ local function CreateRouteRow(f, slot)
 		f.selectedRouteId = self.route and self.route.id
 		f:Refresh()
 	end)
+	-- Tooltip con la descripción de la ruta (si tiene)
+	row:SetScript("OnEnter", function(self)
+		local route = self.route
+		if not (route and route.desc) then return end
+		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+		GameTooltip:SetText(route.name or "?", 1, 0.82, 0)
+		GameTooltip:AddLine(route.desc, 0.9, 0.9, 0.9, true)
+		GameTooltip:Show()
+	end)
+	row:SetScript("OnLeave", GameTooltip_Hide)
 	return row
 end
 
@@ -2605,11 +2620,11 @@ local function CreateManager()
 	newRoute:SetPoint("BOTTOMLEFT", 20, 46)
 	newRoute:SetText(L.ROUTE_NEW)
 	newRoute:SetScript("OnClick", function()
-		AskName(L.ROUTE_NEW_NAME:format(#AllRoutes()), function(name)
-			local route = CreateRoute(name)
+		AskName(L.ROUTE_NEW_NAME:format(#AllRoutes()), function(name, desc)
+			local route = CreateRoute(name, desc)
 			f.selectedRouteId = route.id
 			f:Refresh()
-		end, nil, { hint = L.ROUTE_NAME_HINT, noDescription = true, anchor = newRoute })
+		end, nil, { hint = L.ROUTE_NAME_HINT, anchor = newRoute })
 	end)
 
 	local sep = f:CreateTexture(nil, "ARTWORK")
@@ -2627,10 +2642,10 @@ local function CreateManager()
 	-- Junto al nombre: renombrar la ruta (misma cajita, encima del icono)
 	f.RenameRoute = IconButton(f, "Interface\\Buttons\\UI-GuildButton-PublicNote-Up", L.ROUTE_RENAME, function(self)
 		local route = f:Route()
-		AskName(route.name, function(name)
-			RenameRoute(route, name)
+		AskName(route.name, function(name, desc)
+			RenameRoute(route, name, desc)
 			f:Refresh()
-		end, nil, { hint = L.ROUTE_NAME_HINT, noDescription = true, anchor = self })
+		end, route.desc, { hint = L.ROUTE_NAME_HINT, anchor = self })
 	end)
 	f.RenameRoute:SetPoint("LEFT", f.RouteName, "RIGHT", 6, 0)
 
@@ -3786,7 +3801,7 @@ do
 			if not st.corpse then count = count + 1 end
 		end
 		return {
-			id = route.id, name = route.name, count = count,
+			id = route.id, name = route.name, description = route.desc, count = count,
 			shared = route.shared and true or false, loaded = DB.loadedRoute == route.id,
 		}
 	end
