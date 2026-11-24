@@ -1281,7 +1281,8 @@ local function ImportWayLines(text, clearFirst, route)
 	if clearFirst then ClearStops(true, route) end
 	for raw in (text or ""):gmatch("[^\r\n]+") do
 		local line = raw:match("^%s*(.-)%s*$")
-		if line ~= "" then
+		-- Las líneas vacías y los comentarios ("# Bridge: <nombre>" al exportar) no cuentan
+		if line ~= "" and not line:match("^#") then
 			local lower = line:lower()
 			local args = line
 			if lower:match("^/t?way%s") then
@@ -1356,7 +1357,7 @@ local function ShowImport(route)
 		-- Cuadro de texto de varias líneas, con fondo para que se vea dónde pegar
 		local box = CreateFrame("Frame", nil, f, BackdropTemplateMixin and "BackdropTemplate" or nil)
 		box:SetPoint("TOPLEFT", 20, -62)
-		box:SetPoint("BOTTOMRIGHT", -20, 74)
+		box:SetPoint("BOTTOMRIGHT", -20, 104)
 		if box.SetBackdrop then
 			box:SetBackdrop({
 				bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
@@ -1381,6 +1382,21 @@ local function ShowImport(route)
 		box:SetScript("OnMouseDown", function() eb:SetFocus() end)
 		f.Edit = eb
 
+		-- Importar como ruta nueva, con su nombre (se propone el de "# Bridge: <nombre>")
+		local newRoute = CreateFrame("CheckButton", nil, f, "UICheckButtonTemplate")
+		newRoute:SetSize(24, 24)
+		newRoute:SetPoint("BOTTOMLEFT", 20, 72)
+		local newText = newRoute.Text or newRoute.text or newRoute:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+		newText:ClearAllPoints()
+		newText:SetPoint("LEFT", newRoute, "RIGHT", 2, 0)
+		newText:SetText(L.IMPORT_AS_NEW)
+		local newName = CreateFrame("EditBox", nil, f, "InputBoxTemplate")
+		newName:SetSize(220, 20)
+		newName:SetPoint("LEFT", newText, "RIGHT", 12, 0)
+		newName:SetAutoFocus(false)
+		newName:SetMaxLetters(60)
+		f.NewRoute, f.NewName = newRoute, newName
+
 		local check = CreateFrame("CheckButton", nil, f, "UICheckButtonTemplate")
 		check:SetSize(24, 24)
 		check:SetPoint("BOTTOMLEFT", 20, 44)
@@ -1389,6 +1405,40 @@ local function ShowImport(route)
 		checkText:SetPoint("LEFT", check, "RIGHT", 2, 0)
 		checkText:SetText(L.IMPORT_CLEAR_FIRST)
 		f.Clear = check
+
+		-- En una ruta nueva no hay nada que borrar antes; el nombre solo se escribe si es nueva
+		function f:UpdateNewRoute()
+			local isNew = newRoute:GetChecked() and true or false
+			newName:SetEnabled(isNew)
+			newName:SetAlpha(isNew and 1 or 0.5)
+			check:SetEnabled(not isNew)
+			if isNew then check:SetChecked(false) end
+			-- Que se vea desactivada (el juego no pone en gris el texto de una casilla)
+			check:SetAlpha(isNew and 0.4 or 1)
+			if isNew then checkText:SetTextColor(0.5, 0.5, 0.5) else checkText:SetTextColor(1, 1, 1) end
+			self.Title:SetText(isNew and L.IMPORT_TITLE_NEW or L.IMPORT_TITLE_ROUTE:format((self.route or ActiveRoute()).name or "?"))
+		end
+		newRoute:SetScript("OnClick", function()
+			f.newTouched = true -- ya no se marca sola
+			f:UpdateNewRoute()
+		end)
+		newName:SetScript("OnTextChanged", function(_, userInput)
+			if userInput then f.nameTouched = true end
+		end)
+		-- Si el texto empieza por "# Bridge: <nombre>", se propone ese nombre y se marca la casilla
+		eb:SetScript("OnTextChanged", function(self)
+			-- (solo en esa misma línea: tras "Bridge:" se saltan espacios, no saltos de línea)
+			local header = (self:GetText() or ""):match("^%s*#[ \t]*[Bb]ridge:[ \t]*([^\r\n]+)")
+			header = header and header:match("^(.-)%s*$")
+			if header == "" then header = nil end
+			-- Mientras no los toques a mano, el nombre y la casilla siguen a la cabecera: si se
+			-- queda sin nombre o desaparece, el nombre se vacía y la casilla se desmarca
+			if not f.nameTouched then newName:SetText(header or "") end
+			if not f.newTouched and (newRoute:GetChecked() and true or false) ~= (header ~= nil) then
+				newRoute:SetChecked(header ~= nil)
+				f:UpdateNewRoute()
+			end
+		end)
 
 		local cancel = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
 		cancel:SetSize(110, 24)
@@ -1401,13 +1451,28 @@ local function ShowImport(route)
 		import:SetPoint("RIGHT", cancel, "LEFT", -8, 0)
 		import:SetText(L.IMPORT_BUTTON)
 		import:SetScript("OnClick", function()
-			ImportWayLines(eb:GetText(), check:GetChecked(), f.route)
+			if newRoute:GetChecked() then
+				-- Ruta guardada nueva (nombre sin repetir) y, en Gestionar rutas, queda elegida
+				local name = CleanName(newName:GetText()) or L.ROUTE_NEW_NAME:format(#AllRoutes())
+				local route = CreateRoute(name)
+				ImportWayLines(eb:GetText(), false, route)
+				if managerFrame then
+					managerFrame.selectedRouteId = route.id
+					if managerFrame:IsShown() then managerFrame:Refresh() end
+				end
+			else
+				ImportWayLines(eb:GetText(), check:GetChecked(), f.route)
+			end
 			f:Hide()
 		end)
 
 		f:SetScript("OnShow", function()
+			f.newTouched, f.nameTouched = false, false
+			newRoute:SetChecked(false)
+			newName:SetText("")
 			eb:SetText("")
 			check:SetChecked(false)
+			f:UpdateNewRoute()
 			eb:SetFocus()
 		end)
 		-- Las ventanas nuevas nacen visibles: la dejamos oculta hasta que se abra
@@ -1416,8 +1481,8 @@ local function ShowImport(route)
 	end
 	-- El título dice en qué ruta se importa
 	importFrame.route = route
-	importFrame.Title:SetText(L.IMPORT_TITLE_ROUTE:format((route or ActiveRoute()).name or "?"))
 	importFrame:Show()
+	importFrame:UpdateNewRoute()
 end
 
 -- Mueve una parada a otro punto y rehace la ruta de AzerothGPS
