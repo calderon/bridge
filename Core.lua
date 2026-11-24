@@ -2213,11 +2213,13 @@ local function ShowArrival(title, subtitle)
 	arrivalFrame:Show()
 end
 
--- Cartel, línea en el chat y sonido (tanto si llega la brújula como AzerothGPS)
+-- Cartel, línea en el chat y sonido (tanto si llega la brújula como AzerothGPS).
+-- La opción "Aviso al llegar" lo quita todo; la parada se quita igualmente.
 function AnnounceArrival(s, nextStop)
+	if DB.arrivalBanner == false then return end
 	local title = L.ARRIVED:format(s.name or "?")
 	local subtitle = nextStop and L.NEXT_STOP:format(nextStop.name or "?") or L.ROUTE_DONE
-	if DB.arrivalBanner ~= false then ShowArrival(title, subtitle) end
+	ShowArrival(title, subtitle)
 	Print(title .. " " .. subtitle)
 	PlaySound((SOUNDKIT and SOUNDKIT.MAP_PING) or 3175)
 end

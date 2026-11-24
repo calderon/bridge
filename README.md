@@ -17,7 +17,7 @@ Each place you mark is a **stop**: add it with a click, give it a name, and see 
 * **Names**: each stop can have its own; drop a stop on a map icon and it takes the icon's name.
 * **Minimap**: stops also show while you walk; far-away ones sit on the edge, pointing the way.
 * **Compass**: an on-screen arrow with the next stop's name, distance and estimated time of arrival.
-* **Arrival message**: an on-screen banner, *"You have arrived at… · Next stop: …"*.
+* **Arrival notice**: an on-screen banner, *"You have arrived at… · Next stop: …"*, with a line in chat and a sound. It can be turned off.
 * **Your corpse**: when you die and release your spirit, your body becomes the first stop; it goes away when you resurrect.
 * **Manage stops**: a window to search, reorder, rename and remove stops.
 * **Sharing**: send a stop to your party, raid or guild; players with Bridge can add it with one click.
@@ -66,7 +66,7 @@ It sits at the top right of the world map. Click it to open its menu:
 * **Clear stops** ▸ **In this zone** (the one shown on the map) or **All**.
 * **Units** ▸ **Yards** or **Meters**. Meters by default (yards if the game is in US English).
 * **Show compass** (off by default).
-* **Show arrival message** (on by default).
+* **Arrival notice** (on by default): the banner, the chat line and the sound. Turn it off to reach stops silently: they are still removed when you arrive.
 * **Keep stops between sessions** (on by default).
 * **Ask for a name when adding** (on by default). The box also has an optional **Description** field (Tab to move to it); the description shows in the stop's tooltip on the map and the minimap. You can add or change it later with **Edit name and description**.
 
@@ -74,7 +74,7 @@ To move the button: **Shift + drag** (`/bridge button reset` puts it back).
 
 #### Compass and arrival
 
-The compass points in a straight line to the next stop (number 1) and shows its name, how many are left, the distance and the estimated time of arrival (ETA), worked out from how fast you are getting closer; it is hidden while you are standing still or moving away. Drag it to move it. Within 10 yards, the stop is removed, the message shows up and the compass moves on to the next stop. The compass is what detects your arrival: if it is turned off, stops stay in place.
+The compass points in a straight line to the next stop (number 1) and shows its name, how many are left, the distance and the estimated time of arrival (ETA), worked out from how fast you are getting closer; it is hidden while you are standing still or moving away. Drag it to move it. Within 10 yards, the stop is removed, the arrival notice shows up (if turned on) and the compass moves on to the next stop. The compass is what detects your arrival: if it is turned off, stops stay in place.
 
 #### Your corpse
 
@@ -160,7 +160,7 @@ Cada sitio que marcas es una **parada**: la pones con un clic, le das un nombre 
 * **Nombres**: cada parada puede tener el suyo; si pones la parada sobre un icono del mapa, toma su nombre.
 * **Minimapa**: las paradas también se ven al ir caminando; las lejanas se quedan en el borde, señalando hacia dónde están.
 * **Brújula**: flecha en pantalla con el nombre de la siguiente parada, la distancia y el tiempo estimado de llegada.
-* **Aviso al llegar**: un cartel en pantalla, *"Has llegado a… · Siguiente parada: …"*.
+* **Aviso al llegar**: un cartel en pantalla, *"Has llegado a… · Siguiente parada: …"*, con una línea en el chat y un sonido. Se puede desactivar.
 * **Tu cadáver**: al morir y liberar el espíritu, tu cuerpo pasa a ser la primera parada; se quita al resucitar.
 * **Gestionar paradas**: una ventana para buscar, ordenar, renombrar y quitar paradas.
 * **Compartir**: manda una parada a tu grupo, banda o hermandad; quien tenga Bridge puede añadirla con un clic.
@@ -209,7 +209,7 @@ Está arriba a la derecha del mapa del mundo. Haz clic para abrir su menú:
 * **Borrar paradas** ▸ **De la zona** (la que se ve en el mapa) o **Todas**.
 * **Unidades** ▸ **Yardas** o **Metros**. De entrada, metros (yardas si el juego está en inglés de EE. UU.).
 * **Mostrar brújula** (desactivada de entrada).
-* **Mostrar aviso al llegar** (activado de entrada).
+* **Aviso al llegar** (activado de entrada): el cartel, la línea en el chat y el sonido. Desactívalo para llegar a las paradas sin avisos: se siguen quitando al llegar.
 * **Guardar paradas entre sesiones** (activado de entrada).
 * **Pedir nombre al añadir** (activado de entrada). La caja tiene además un campo opcional de **Descripción** (Tab para pasar a él); la descripción sale en el tooltip de la parada en el mapa y el minimapa. Puedes añadirla o cambiarla después con **Editar nombre y descripción**.
 
@@ -217,7 +217,7 @@ Para mover el botón: **Mayús + arrastrar** (`/bridge button reset` lo devuelve
 
 #### Brújula y llegada
 
-La brújula apunta en línea recta a la siguiente parada (la número 1) y muestra su nombre, cuántas quedan, la distancia y el tiempo estimado de llegada, calculado según lo rápido que te acercas; no aparece si estás parado o te alejas. Arrástrala para moverla. Cuando estás a menos de 10 yardas, la parada se quita, sale el aviso y la brújula pasa a la siguiente. Es la brújula la que detecta la llegada: si está desactivada, las paradas se quedan puestas.
+La brújula apunta en línea recta a la siguiente parada (la número 1) y muestra su nombre, cuántas quedan, la distancia y el tiempo estimado de llegada, calculado según lo rápido que te acercas; no aparece si estás parado o te alejas. Arrástrala para moverla. Cuando estás a menos de 10 yardas, la parada se quita, sale el aviso (si está activado) y la brújula pasa a la siguiente. Es la brújula la que detecta la llegada: si está desactivada, las paradas se quedan puestas.
 
 #### Tu cadáver
 

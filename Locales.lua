@@ -67,7 +67,7 @@ local L = {
 	SHARE_GUILD = "Guild",
 	MENU_KEEP = "Keep stops between sessions",
 	MENU_COMPASS = "Show compass",
-	MENU_ARRIVAL = "Show arrival message",
+	MENU_ARRIVAL = "Arrival notice",
 	WAY_RESET_USAGE = "Usage: /way reset all | /way reset <zone> | /way reset not <zone>",
 	CWAY_DONE = "Next stop: %s (%s), the closest one.",
 	CWAY_NONE = "No stop on this continent.",
@@ -213,7 +213,7 @@ if locale == "esES" or locale == "esMX" then
 	L.SHARE_GUILD = "Hermandad"
 	L.MENU_KEEP = "Guardar paradas entre sesiones"
 	L.MENU_COMPASS = "Mostrar brújula"
-	L.MENU_ARRIVAL = "Mostrar aviso al llegar"
+	L.MENU_ARRIVAL = "Aviso al llegar"
 	L.WAY_RESET_USAGE = "Uso: /way reset all | /way reset <zona> | /way reset not <zona>"
 	L.CWAY_DONE = "Siguiente parada: %s (%s), la más cercana."
 	L.CWAY_NONE = "No hay paradas en este continente."
