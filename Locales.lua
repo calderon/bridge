@@ -51,6 +51,8 @@ local L = {
 	ROUTE_NEW_NAME = "Route %d",
 	ROUTE_NAME_HINT = "Route name (Enter: OK · Esc: cancel)",
 	ROUTE_CREATED = "Route created: %s",
+	ROUTE_RENAME = "Rename route",
+	ROUTE_RENAMED = "Route renamed: %s",
 	MANAGER_HINT = "Click: show on the map · Drag: reorder",
 
 	-- Importar una lista de /way
@@ -206,6 +208,8 @@ if locale == "esES" or locale == "esMX" then
 	L.ROUTE_NEW_NAME = "Ruta %d"
 	L.ROUTE_NAME_HINT = "Nombre de la ruta (Intro: aceptar · Esc: cancelar)"
 	L.ROUTE_CREATED = "Ruta creada: %s"
+	L.ROUTE_RENAME = "Renombrar ruta"
+	L.ROUTE_RENAMED = "Ruta renombrada: %s"
 	L.MANAGER_HINT = "Clic: ver en el mapa · Arrastrar: reordenar"
 
 	L.IMPORT_OPEN = "Importar lista /way"
