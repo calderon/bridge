@@ -47,6 +47,10 @@ local L = {
 	ROUTE_ACTIVATE = "Activate route",
 	ROUTE_IS_ACTIVE = "Active route",
 	ROUTE_ACTIVATED = "Active route: %s",
+	ROUTE_NEW = "New route",
+	ROUTE_NEW_NAME = "Route %d",
+	ROUTE_NAME_HINT = "Route name (Enter: OK · Esc: cancel)",
+	ROUTE_CREATED = "Route created: %s",
 	MANAGER_HINT = "Click: show on the map · Drag: reorder",
 
 	-- Importar una lista de /way
@@ -198,6 +202,10 @@ if locale == "esES" or locale == "esMX" then
 	L.ROUTE_ACTIVATE = "Activar ruta"
 	L.ROUTE_IS_ACTIVE = "Ruta activa"
 	L.ROUTE_ACTIVATED = "Ruta activa: %s"
+	L.ROUTE_NEW = "Nueva ruta"
+	L.ROUTE_NEW_NAME = "Ruta %d"
+	L.ROUTE_NAME_HINT = "Nombre de la ruta (Intro: aceptar · Esc: cancelar)"
+	L.ROUTE_CREATED = "Ruta creada: %s"
 	L.MANAGER_HINT = "Clic: ver en el mapa · Arrastrar: reordenar"
 
 	L.IMPORT_OPEN = "Importar lista /way"

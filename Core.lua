@@ -411,7 +411,9 @@ end
 
 local nameBox
 -- onAccept(nombre, descripción): la descripción es opcional (nil si se deja vacía)
-local function AskName(suggestion, onAccept, description)
+-- opts (opcional): { hint = "título de la caja", noDescription = true (solo el nombre),
+--   anchor = frame (la caja sale encima de él, alineada a su izquierda; si no, junto al ratón) }
+local function AskName(suggestion, onAccept, description, opts)
 	if not nameBox then
 		local f = CreateFrame("Frame", "BridgeNameFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
 		f:SetSize(230, 90)
@@ -429,12 +431,8 @@ local function AskName(suggestion, onAccept, description)
 		end
 		local hint = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
 		hint:SetPoint("TOPLEFT", 10, -7)
-		hint:SetText(L.NAME_BOX_HINT)
-		-- El ancho se ajusta al título (cambia según el idioma)
-		local width = math.max(230, math.ceil(hint:GetStringWidth()) + 22)
-		f:SetWidth(width)
 		local eb = CreateFrame("EditBox", nil, f, "InputBoxTemplate")
-		eb:SetSize(width - 26, 20)
+		eb:SetHeight(20)
 		eb:SetPoint("TOPLEFT", 14, -22)
 		eb:SetAutoFocus(false)
 		eb:SetMaxLetters(60)
@@ -442,7 +440,7 @@ local function AskName(suggestion, onAccept, description)
 		descHint:SetPoint("TOPLEFT", eb, "BOTTOMLEFT", -4, -8)
 		descHint:SetText(L.DESC_BOX_HINT)
 		local db = CreateFrame("EditBox", nil, f, "InputBoxTemplate")
-		db:SetSize(width - 26, 20)
+		db:SetHeight(20)
 		db:SetPoint("TOPLEFT", descHint, "BOTTOMLEFT", 4, -3)
 		db:SetAutoFocus(false)
 		db:SetMaxLetters(200)
@@ -463,6 +461,7 @@ local function AskName(suggestion, onAccept, description)
 			-- Tab: pasar al otro campo
 			box:SetScript("OnTabPressed", function(self)
 				local other = self == eb and db or eb
+				if not other:IsShown() then return end
 				other:SetFocus()
 				other:HighlightText()
 			end)
@@ -476,17 +475,34 @@ local function AskName(suggestion, onAccept, description)
 			end)
 		end
 		f.Edit, f.Desc, f.Close = eb, db, Close
+		f.Hint, f.DescHint = hint, descHint
 		nameBox = f
 	end
+	-- Título y campos según para qué sea (parada: nombre y descripción; ruta: solo nombre)
+	opts = opts or {}
+	nameBox.Hint:SetText(opts.hint or L.NAME_BOX_HINT)
+	nameBox.DescHint:SetShown(not opts.noDescription)
+	nameBox.Desc:SetShown(not opts.noDescription)
+	nameBox:SetHeight(opts.noDescription and 52 or 90)
+	-- El ancho se ajusta al título (cambia según el idioma)
+	local width = math.max(230, math.ceil(nameBox.Hint:GetStringWidth()) + 22)
+	nameBox:SetWidth(width)
+	nameBox.Edit:SetWidth(width - 26)
+	nameBox.Desc:SetWidth(width - 26)
 	-- Si había otra caja abierta, se acepta antes de abrir la nueva
 	if nameBox:IsShown() then nameBox.Close(true) end
 	nameBox.suggestion, nameBox.onAccept = suggestion, onAccept
-	local scale = UIParent:GetEffectiveScale()
-	local cx, cy = GetCursorPosition()
 	nameBox:ClearAllPoints()
-	nameBox:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", cx / scale + 14, cy / scale + 10)
+	if opts.anchor then
+		nameBox:SetPoint("BOTTOMLEFT", opts.anchor, "TOPLEFT", -4, 4)
+	else
+		local scale = UIParent:GetEffectiveScale()
+		local cx, cy = GetCursorPosition()
+		nameBox:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", cx / scale + 14, cy / scale + 10)
+	end
 	nameBox:SetClampedToScreen(true)
 	nameBox:Show()
+	nameBox:Raise() -- por encima de la ventana Gestionar rutas
 	nameBox.Desc:SetText(description or "")
 	nameBox.Edit:SetText(suggestion)
 	nameBox.Edit:SetFocus()
@@ -592,6 +608,28 @@ local function RenameStop(index, newName, newDesc, setDesc, route)
 	Print((nameChanged and L.STOP_RENAMED or L.STOP_EDITED):format(newName))
 	if active then Fire("STOP_CHANGED", PublicStop(s)) end
 	return true
+end
+
+-- Nombre de ruta sin repetir: si ya existe, se le añade " (2)", " (3)"…
+local function UniqueRouteName(name)
+	local function Taken(candidate)
+		for _, route in ipairs(DB.routes) do
+			if (route.name or ""):lower() == candidate:lower() then return true end
+		end
+	end
+	local candidate, n = name, 1
+	while Taken(candidate) do
+		n = n + 1
+		candidate = string.format("%s (%d)", name, n)
+	end
+	return candidate
+end
+
+-- Ruta nueva, vacía (no se activa)
+local function CreateRoute(name)
+	local route = NewRoute(UniqueRouteName(name))
+	Print(L.ROUTE_CREATED:format(route.name))
+	return route
 end
 
 -- Activar una ruta: pasa a ser la que siguen la brújula, el mapa, el minimapa y
@@ -2041,7 +2079,7 @@ local function CreateManager()
 	routesTitle:SetText(L.MANAGER_ROUTES)
 	local rsf = CreateFrame("ScrollFrame", "BridgeManagerRouteScroll", f, "UIPanelScrollFrameTemplate")
 	rsf:SetPoint("TOPLEFT", 18, -98)
-	rsf:SetPoint("BOTTOMLEFT", 18, 42)
+	rsf:SetPoint("BOTTOMLEFT", 18, 74)
 	rsf:SetWidth(172)
 	local rcontent = CreateFrame("Frame", nil, rsf)
 	rcontent:SetSize(172, 1)
@@ -2049,6 +2087,19 @@ local function CreateManager()
 	f.RouteContent = rcontent
 	f.RouteScrollBar = rsf.ScrollBar or _G["BridgeManagerRouteScrollScrollBar"]
 	f.routeRows = {}
+
+	-- Bajo la lista de rutas: crear una ruta nueva (queda elegida, no activa)
+	local newRoute = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+	newRoute:SetSize(184, 22)
+	newRoute:SetPoint("BOTTOMLEFT", 20, 46)
+	newRoute:SetText(L.ROUTE_NEW)
+	newRoute:SetScript("OnClick", function()
+		AskName(L.ROUTE_NEW_NAME:format(#DB.routes + 1), function(name)
+			local route = CreateRoute(name)
+			f.selectedRouteId = route.id
+			f:Refresh()
+		end, nil, { hint = L.ROUTE_NAME_HINT, noDescription = true, anchor = newRoute })
+	end)
 
 	local sep = f:CreateTexture(nil, "ARTWORK")
 	sep:SetColorTexture(1, 1, 1, 0.08)
