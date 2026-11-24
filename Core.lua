@@ -2819,6 +2819,11 @@ local function CreateManager()
 	end)
 	f.DeleteRoute:SetPoint("LEFT", f.RestartRoute, "RIGHT", 4, 0)
 
+	-- Los iconos de la ruta, del mismo tamaño que los botones de importar y exportar
+	for _, icon in ipairs({ f.RenameRoute, f.DuplicateRoute, f.RestartRoute, f.ClearRoute, f.DeleteRoute }) do
+		icon:SetSize(22, 22)
+	end
+
 	-- Buscador, arriba y sobre las dos columnas (por ahora filtra los waypoints de la
 	-- ruta elegida; buscará también en las rutas)
 	local ok, search = pcall(CreateFrame, "EditBox", "BridgeManagerSearch", f, "SearchBoxTemplate")
