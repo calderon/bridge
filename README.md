@@ -73,7 +73,7 @@ To move the button: **Shift + drag** (`/bridge button reset` puts it back).
 
 #### Compass and arrival
 
-The compass points in a straight line to the next stop (number 1) and shows its name, how many are left, the distance and the estimated time of arrival (ETA), worked out from how fast you are getting closer; it is hidden while you are standing still or moving away. Drag it to move it. Within 10 yards, the stop is marked as reached (it stays saved in its route), the arrival notice shows up (if turned on) and the compass moves on to the next stop. After the last one, the notice says the route is completed. The compass is what detects your arrival: if it is turned off, the route doesn't advance.
+The compass points in a straight line to the next stop (number 1) and shows its name, how many are left, the distance and the estimated time of arrival (ETA), worked out from how fast you are getting closer; it is hidden while you are standing still or moving away. Drag it to move it. Within 10 yards, the stop is marked as reached (it stays saved in its route and turns grey on the map, the minimap and the Manage routes list until you restart the route), the arrival notice shows up (if turned on) and the compass moves on to the next stop. After the last one, the notice says the route is completed. The compass is what detects your arrival: if it is turned off, the route doesn't advance.
 
 #### Your corpse
 
@@ -215,7 +215,7 @@ Para mover el botón: **Mayús + arrastrar** (`/bridge button reset` lo devuelve
 
 #### Brújula y llegada
 
-La brújula apunta en línea recta a la siguiente parada (la número 1) y muestra su nombre, cuántas quedan, la distancia y el tiempo estimado de llegada, calculado según lo rápido que te acercas; no aparece si estás parado o te alejas. Arrástrala para moverla. Cuando estás a menos de 10 yardas, la parada queda marcada como alcanzada (sigue guardada en su ruta), sale el aviso (si está activado) y la brújula pasa a la siguiente. Tras la última, el aviso dice que la ruta está completada. Es la brújula la que detecta la llegada: si está desactivada, la ruta no avanza.
+La brújula apunta en línea recta a la siguiente parada (la número 1) y muestra su nombre, cuántas quedan, la distancia y el tiempo estimado de llegada, calculado según lo rápido que te acercas; no aparece si estás parado o te alejas. Arrástrala para moverla. Cuando estás a menos de 10 yardas, la parada queda marcada como alcanzada (sigue guardada en su ruta y se ve en gris en el mapa, el minimapa y la lista de Gestionar rutas hasta que reinicies la ruta), sale el aviso (si está activado) y la brújula pasa a la siguiente. Tras la última, el aviso dice que la ruta está completada. Es la brújula la que detecta la llegada: si está desactivada, la ruta no avanza.
 
 #### Tu cadáver
 
