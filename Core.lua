@@ -721,6 +721,23 @@ local function ActivateRoute(route)
 	Fire("ACTIVE_ROUTE_CHANGED", { id = route.id, name = route.name })
 end
 
+-- Copia de una ruta con todas sus paradas ("<nombre> (copia)"), sin activar.
+-- Las paradas copiadas son nuevas (otro id) y empiezan sin alcanzar; tu cadáver no se copia.
+local function DuplicateRoute(route)
+	if not route then return end
+	local copy = NewRoute(UniqueRouteName(L.ROUTE_COPY_NAME:format(route.name or "?")))
+	for _, st in ipairs(route.stops) do
+		if not st.corpse then
+			local new = {}
+			for k, v in pairs(st) do new[k] = v end
+			new.id, new.reached = NewStopId(), nil
+			table.insert(copy.stops, new)
+		end
+	end
+	Print(L.ROUTE_DUPLICATED:format(copy.name))
+	return copy
+end
+
 -- Borrar una ruta con sus paradas. Nunca la última. Si era la activa, se activa otra
 -- (ActivateRoute se lleva también tu cadáver, si lo hay).
 local function DeleteRoute(route)
@@ -2210,6 +2227,16 @@ local function CreateManager()
 	end)
 	f.RenameRoute:SetPoint("LEFT", f.RouteName, "RIGHT", 6, 0)
 
+	-- Duplicarla (la copia queda elegida, no activa)
+	f.DuplicateRoute = IconButton(f, "Interface\\Buttons\\UI-PlusButton-Up", L.ROUTE_DUPLICATE, function()
+		local copy = DuplicateRoute(f:Route())
+		if copy then
+			f.selectedRouteId = copy.id
+			f:Refresh()
+		end
+	end)
+	f.DuplicateRoute:SetPoint("LEFT", f.RenameRoute, "RIGHT", 4, 0)
+
 	-- Y borrarla (con confirmación; nunca la última)
 	f.DeleteRoute = IconButton(f, "Interface\\Buttons\\UI-GroupLoot-Pass-Up", L.ROUTE_DELETE, function(self)
 		local route = f:Route()
@@ -2224,7 +2251,7 @@ local function CreateManager()
 			end
 		end, self)
 	end)
-	f.DeleteRoute:SetPoint("LEFT", f.RenameRoute, "RIGHT", 4, 0)
+	f.DeleteRoute:SetPoint("LEFT", f.DuplicateRoute, "RIGHT", 4, 0)
 
 	-- Buscador, arriba y sobre las dos columnas (por ahora filtra los waypoints de la
 	-- ruta elegida; buscará también en las rutas)
