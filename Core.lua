@@ -389,75 +389,79 @@ local function SlashExists(cmd)
 	return #HandlersFor(cmd) > 0
 end
 
-local Senders = {}
+-- (Bloque: lo de dentro solo se usa aquí; fuera quedan sendingOurs y RunSlash. Lua admite como mucho 200 variables locales en el cuerpo principal del archivo.)
+local sendingOurs, RunSlash
+do
+	local Senders = {}
 
--- Si algún addon tiene el comando registrado: se le llama directamente
-function Senders.todos(line, cmd, rest)
-	local any = false
-	for _, h in ipairs(HandlersFor(cmd)) do
-		local ok, err = pcall(h.fn, rest, DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.editBox)
-		if ok then any = true elseif DB.debug then Print(L.DEBUG_HANDLER_ERROR:format(h.key, tostring(err))) end
-	end
-	return any
-end
-
--- true mientras Bridge manda sus propios comandos (para no copiarlos de vuelta)
-local sendingOurs = false
-
--- "enter": escribe la línea en la caja del chat y pulsa Intro, como si fueras tú.
--- No se hace al momento: se pone en cola y se manda un instante después. Si se
--- mandara mientras el chat aún procesa un comando tuyo (p. ej. /bridge borrar), la
--- caja todavía tendría tu comando y se volvería a ejecutar una y otra vez.
-local chatQueue, chatScheduled = {}, false
-local FlushChatQueue
-local function ScheduleChatFlush(delay)
-	if chatScheduled then return end
-	chatScheduled = true
-	C_Timer.After(delay or 0, function()
-		chatScheduled = false
-		FlushChatQueue()
-	end)
-end
-FlushChatQueue = function()
-	local eb = DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.editBox
-	if not eb then wipe(chatQueue) return end
-	-- Si estás escribiendo algo en el chat, esperamos a que termines
-	if eb:HasFocus() and (eb:GetText() or "") ~= "" then
-		ScheduleChatFlush(0.5)
-		return
-	end
-	local onEnter = eb:GetScript("OnEnterPressed")
-	while #chatQueue > 0 do
-		local line = table.remove(chatQueue, 1)
-		sendingOurs = true
-		eb:SetText(line)
-		if onEnter then
-			pcall(onEnter, eb)
-		elseif ChatEdit_SendText then
-			pcall(ChatEdit_SendText, eb, 0)
+	-- Si algún addon tiene el comando registrado: se le llama directamente
+	function Senders.todos(line, cmd, rest)
+		local any = false
+		for _, h in ipairs(HandlersFor(cmd)) do
+			local ok, err = pcall(h.fn, rest, DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.editBox)
+			if ok then any = true elseif DB.debug then Print(L.DEBUG_HANDLER_ERROR:format(h.key, tostring(err))) end
 		end
-		sendingOurs = false
-		if (eb:GetText() or "") ~= "" then eb:SetText("") end
+		return any
 	end
-end
-function Senders.enter(line)
-	if not (DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.editBox) then return false end
-	table.insert(chatQueue, line)
-	ScheduleChatFlush(0)
-	return true
-end
 
-local function RunSlash(line)
-	local cmd, rest = line:match("^(/%S+)%s*(.*)$")
-	if not cmd then return false end
-	-- AzerothGPS no registra /agps ni /way como comandos: lee lo que se escribe en el
-	-- chat. Si nadie tiene registrado el comando, lo escribimos en el chat por ti.
-	local sender = SlashExists(cmd) and Senders.todos or Senders.enter
-	if DB.debug then Print(L.DEBUG_SENDING:format(line)) end
-	sendingOurs = true
-	local ok, result = pcall(sender, line, cmd, rest)
+	-- true mientras Bridge manda sus propios comandos (para no copiarlos de vuelta)
 	sendingOurs = false
-	return ok and result
+
+	-- "enter": escribe la línea en la caja del chat y pulsa Intro, como si fueras tú.
+	-- No se hace al momento: se pone en cola y se manda un instante después. Si se
+	-- mandara mientras el chat aún procesa un comando tuyo (p. ej. /bridge borrar), la
+	-- caja todavía tendría tu comando y se volvería a ejecutar una y otra vez.
+	local chatQueue, chatScheduled = {}, false
+	local FlushChatQueue
+	local function ScheduleChatFlush(delay)
+		if chatScheduled then return end
+		chatScheduled = true
+		C_Timer.After(delay or 0, function()
+			chatScheduled = false
+			FlushChatQueue()
+		end)
+	end
+	FlushChatQueue = function()
+		local eb = DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.editBox
+		if not eb then wipe(chatQueue) return end
+		-- Si estás escribiendo algo en el chat, esperamos a que termines
+		if eb:HasFocus() and (eb:GetText() or "") ~= "" then
+			ScheduleChatFlush(0.5)
+			return
+		end
+		local onEnter = eb:GetScript("OnEnterPressed")
+		while #chatQueue > 0 do
+			local line = table.remove(chatQueue, 1)
+			sendingOurs = true
+			eb:SetText(line)
+			if onEnter then
+				pcall(onEnter, eb)
+			elseif ChatEdit_SendText then
+				pcall(ChatEdit_SendText, eb, 0)
+			end
+			sendingOurs = false
+			if (eb:GetText() or "") ~= "" then eb:SetText("") end
+		end
+	end
+	function Senders.enter(line)
+		if not (DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.editBox) then return false end
+		table.insert(chatQueue, line)
+		ScheduleChatFlush(0)
+		return true
+	end
+
+	function RunSlash(line)
+		local cmd, rest = line:match("^(/%S+)%s*(.*)$")
+		if not cmd then return false end
+		-- AzerothGPS no registra /agps ni /way como comandos: lee lo que se escribe en el
+		-- chat. Si nadie tiene registrado el comando, lo escribimos en el chat por ti.
+		local sender = SlashExists(cmd) and Senders.todos or Senders.enter
+		if DB.debug then Print(L.DEBUG_SENDING:format(line)) end
+		sendingOurs = true
+		local ok, result = pcall(sender, line, cmd, rest)
+		sendingOurs = false
+		return ok and result
+	end
 end
 
 -- AzerothGPS es opcional. Sin él, las paradas se quedan solo en el mapa: no hay a
@@ -3234,39 +3238,43 @@ local function ArriveAt(index)
 end
 
 -- Tiempo estimado de llegada: "1:23" o "1:05:30"
-local function FormatETA(seconds)
-	seconds = math.floor(seconds + 0.5)
-	local h, m, s = math.floor(seconds / 3600), math.floor(seconds / 60) % 60, seconds % 60
-	if h > 0 then return string.format("%d:%02d:%02d", h, m, s) end
-	return string.format("%d:%02d", m, s)
-end
+-- (Bloque del ETA: fuera quedan FormatETA y UpdateETA.)
+local FormatETA, UpdateETA
+do
+	function FormatETA(seconds)
+		seconds = math.floor(seconds + 0.5)
+		local h, m, s = math.floor(seconds / 3600), math.floor(seconds / 60) % 60, seconds % 60
+		if h > 0 then return string.format("%d:%02d:%02d", h, m, s) end
+		return string.format("%d:%02d", m, s)
+	end
 
--- Cada medio segundo mide cuánto se ha acortado la distancia (velocidad de acercamiento),
--- la suaviza para que el ETA no salte, y devuelve los segundos que faltan (nil si no te acercas)
-local ETA_STEP = 0.5        -- segundos entre medidas
-local ETA_MIN_SPEED = 1     -- yardas/s: por debajo, no se muestra ETA
-local ETA_MAX_SPEED = 150   -- yardas/s: por encima es un salto (teletransporte, cambio de parada...)
-local function UpdateETA(self, stop, d)
-	local now = GetTime()
-	-- Sin distancia (otro continente, mazmorra...), sin medida anterior o con otra parada: volver a empezar
-	if not d or not self.etaD or self.etaStop ~= stop then
-		self.etaStop, self.etaD, self.etaT, self.etaSpeed = stop, d, now, nil
-		return
-	end
-	local dt = now - self.etaT
-	if dt >= ETA_STEP then
-		local speed = (self.etaD - d) / dt
-		if math.abs(speed) > ETA_MAX_SPEED then
-			self.etaSpeed = nil
-		elseif self.etaSpeed then
-			self.etaSpeed = self.etaSpeed * 0.7 + speed * 0.3
-		else
-			self.etaSpeed = speed
+	-- Cada medio segundo mide cuánto se ha acortado la distancia (velocidad de acercamiento),
+	-- la suaviza para que el ETA no salte, y devuelve los segundos que faltan (nil si no te acercas)
+	local ETA_STEP = 0.5        -- segundos entre medidas
+	local ETA_MIN_SPEED = 1     -- yardas/s: por debajo, no se muestra ETA
+	local ETA_MAX_SPEED = 150   -- yardas/s: por encima es un salto (teletransporte, cambio de parada...)
+	function UpdateETA(self, stop, d)
+		local now = GetTime()
+		-- Sin distancia (otro continente, mazmorra...), sin medida anterior o con otra parada: volver a empezar
+		if not d or not self.etaD or self.etaStop ~= stop then
+			self.etaStop, self.etaD, self.etaT, self.etaSpeed = stop, d, now, nil
+			return
 		end
-		self.etaD, self.etaT = d, now
-	end
-	if self.etaSpeed and self.etaSpeed >= ETA_MIN_SPEED then
-		return d / self.etaSpeed
+		local dt = now - self.etaT
+		if dt >= ETA_STEP then
+			local speed = (self.etaD - d) / dt
+			if math.abs(speed) > ETA_MAX_SPEED then
+				self.etaSpeed = nil
+			elseif self.etaSpeed then
+				self.etaSpeed = self.etaSpeed * 0.7 + speed * 0.3
+			else
+				self.etaSpeed = speed
+			end
+			self.etaD, self.etaT = d, now
+		end
+		if self.etaSpeed and self.etaSpeed >= ETA_MIN_SPEED then
+			return d / self.etaSpeed
+		end
 	end
 end
 
@@ -3385,112 +3393,116 @@ end
 ---------------------------------------------------------------------------
 
 -- Diámetro en yardas que abarca el minimapa en cada nivel de zoom (0 = más alejado)
-local MINIMAP_YARDS = {
-	outdoor = { [0] = 466 + 2 / 3, 400, 333 + 1 / 3, 266 + 2 / 3, 200, 133 + 1 / 3 },
-	indoor = { [0] = 300, 240, 180, 120, 80, 50 },
-}
-local MINI_SIZE = 18
-local miniPins = {}
+-- (Bloque del minimapa: fuera queda StartMinimapPins.)
+local StartMinimapPins
+do
+	local MINIMAP_YARDS = {
+		outdoor = { [0] = 466 + 2 / 3, 400, 333 + 1 / 3, 266 + 2 / 3, 200, 133 + 1 / 3 },
+		indoor = { [0] = 300, 240, 180, 120, 80, 50 },
+	}
+	local MINI_SIZE = 18
+	local miniPins = {}
 
-local function MiniPin(i)
-	local pin = miniPins[i]
-	if pin then return pin end
-	pin = CreateFrame("Frame", nil, Minimap)
-	pin:SetSize(MINI_SIZE, MINI_SIZE)
-	pin.Icon = pin:CreateTexture(nil, "ARTWORK")
-	pin.Icon:SetTexture(PIN_TEXTURE)
-	pin.Icon:SetSize(MINI_SIZE, MINI_SIZE)
-	-- Igual que en el mapa: la punta del pin cae en el punto de la parada
-	pin.Icon:SetPoint("CENTER", 0, MINI_SIZE * 13 / 28)
-	pin.Label = pin:CreateFontString(nil, "OVERLAY")
-	pin.Label:SetFont(STANDARD_TEXT_FONT, 8, "OUTLINE")
-	pin.Label:SetTextColor(1, 1, 1)
-	pin.Label:SetPoint("CENTER", pin.Icon, "CENTER", 0, 0)
-	-- Solo el ratón por encima (tooltip); los clics siguen yendo al minimapa
-	if pin.SetMouseClickEnabled then
-		pin:SetMouseClickEnabled(false)
-		pin:SetMouseMotionEnabled(true)
-	else
-		pin:EnableMouse(true)
-	end
-	pin:SetHitRectInsets(3, 3, -7, MINI_SIZE / 2)
-	pin:SetScript("OnEnter", function(self)
-		local st = self.stop
-		if not st then return end
-		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-		GameTooltip:SetText(st.name or "?", 1, 0.82, 0)
-		if st.desc then GameTooltip:AddLine(st.desc, 0.9, 0.9, 0.9, true) end
-		if st.reached then GameTooltip:AddLine(L.REACHED_TIP, 0.6, 0.6, 0.6) end
-		local d = DistanceTo(st)
-		if d then GameTooltip:AddLine(FormatDistance(d), 1, 1, 1) end
-		GameTooltip:Show()
-	end)
-	pin:SetScript("OnLeave", GameTooltip_Hide)
-	miniPins[i] = pin
-	return pin
-end
-
-local function HideMiniPins(from)
-	for i = from or 1, #miniPins do miniPins[i]:Hide() end
-end
-
-local function UpdateMinimapPins()
-	if not DB or HasGPS() or not DB.showPins or not Minimap:IsVisible() then
-		HideMiniPins()
-		return
-	end
-	local px, py, _, instance = UnitPosition("player")
-	if not px then HideMiniPins() return end
-	local zoom = Minimap:GetZoom() or 0
-	local sizes = (IsIndoors and IsIndoors()) and MINIMAP_YARDS.indoor or MINIMAP_YARDS.outdoor
-	local radius = (sizes[zoom] or sizes[0]) / 2
-	local halfW, halfH = Minimap:GetWidth() / 2, Minimap:GetHeight() / 2
-	local rotate = GetCVar("rotateMinimap") == "1"
-	local facing = rotate and GetPlayerFacing and GetPlayerFacing() or 0
-	local cosF, sinF = math.cos(-facing), math.sin(-facing)
-	local square = GetMinimapShape and GetMinimapShape() == "SQUARE"
-	local shown = 0
-	for i, st in ipairs(Stops()) do
-		if st.wx and st.cont == instance and not st.corpse then
-			-- En coordenadas de mundo, x es el norte e y el oeste
-			local east, north = py - st.wy, st.wx - px
-			if rotate then
-				east, north = east * cosF - north * sinF, east * sinF + north * cosF
-			end
-			local x, y = east / radius, north / radius
-			-- Las que caen fuera se quedan en el borde, señalando hacia dónde están
-			local edge = false
-			if square then
-				local m = math.max(math.abs(x), math.abs(y))
-				if m > 1 then x, y, edge = x / m, y / m, true end
-			else
-				local m = math.sqrt(x * x + y * y)
-				if m > 0.95 then x, y, edge = x / m * 0.95, y / m * 0.95, true end
-			end
-			shown = shown + 1
-			local pin = MiniPin(shown)
-			pin.stop = st
-			ApplyLook(pin.Icon, pin.Label, st, i, MINI_SIZE)
-			pin:SetAlpha(edge and 0.6 or 1)
-			pin:SetFrameLevel(Minimap:GetFrameLevel() + 5 + (#Stops() - i))
-			pin:ClearAllPoints()
-			pin:SetPoint("CENTER", Minimap, "CENTER", x * halfW, y * halfH)
-			pin:Show()
+	local function MiniPin(i)
+		local pin = miniPins[i]
+		if pin then return pin end
+		pin = CreateFrame("Frame", nil, Minimap)
+		pin:SetSize(MINI_SIZE, MINI_SIZE)
+		pin.Icon = pin:CreateTexture(nil, "ARTWORK")
+		pin.Icon:SetTexture(PIN_TEXTURE)
+		pin.Icon:SetSize(MINI_SIZE, MINI_SIZE)
+		-- Igual que en el mapa: la punta del pin cae en el punto de la parada
+		pin.Icon:SetPoint("CENTER", 0, MINI_SIZE * 13 / 28)
+		pin.Label = pin:CreateFontString(nil, "OVERLAY")
+		pin.Label:SetFont(STANDARD_TEXT_FONT, 8, "OUTLINE")
+		pin.Label:SetTextColor(1, 1, 1)
+		pin.Label:SetPoint("CENTER", pin.Icon, "CENTER", 0, 0)
+		-- Solo el ratón por encima (tooltip); los clics siguen yendo al minimapa
+		if pin.SetMouseClickEnabled then
+			pin:SetMouseClickEnabled(false)
+			pin:SetMouseMotionEnabled(true)
+		else
+			pin:EnableMouse(true)
 		end
+		pin:SetHitRectInsets(3, 3, -7, MINI_SIZE / 2)
+		pin:SetScript("OnEnter", function(self)
+			local st = self.stop
+			if not st then return end
+			GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+			GameTooltip:SetText(st.name or "?", 1, 0.82, 0)
+			if st.desc then GameTooltip:AddLine(st.desc, 0.9, 0.9, 0.9, true) end
+			if st.reached then GameTooltip:AddLine(L.REACHED_TIP, 0.6, 0.6, 0.6) end
+			local d = DistanceTo(st)
+			if d then GameTooltip:AddLine(FormatDistance(d), 1, 1, 1) end
+			GameTooltip:Show()
+		end)
+		pin:SetScript("OnLeave", GameTooltip_Hide)
+		miniPins[i] = pin
+		return pin
 	end
-	HideMiniPins(shown + 1)
-end
 
-local function StartMinimapPins()
-	if not Minimap then return end
-	local driver = CreateFrame("Frame")
-	local wait = 0
-	driver:SetScript("OnUpdate", function(_, elapsed)
-		wait = wait - elapsed
-		if wait > 0 then return end
-		wait = 0.05
-		UpdateMinimapPins()
-	end)
+	local function HideMiniPins(from)
+		for i = from or 1, #miniPins do miniPins[i]:Hide() end
+	end
+
+	local function UpdateMinimapPins()
+		if not DB or HasGPS() or not DB.showPins or not Minimap:IsVisible() then
+			HideMiniPins()
+			return
+		end
+		local px, py, _, instance = UnitPosition("player")
+		if not px then HideMiniPins() return end
+		local zoom = Minimap:GetZoom() or 0
+		local sizes = (IsIndoors and IsIndoors()) and MINIMAP_YARDS.indoor or MINIMAP_YARDS.outdoor
+		local radius = (sizes[zoom] or sizes[0]) / 2
+		local halfW, halfH = Minimap:GetWidth() / 2, Minimap:GetHeight() / 2
+		local rotate = GetCVar("rotateMinimap") == "1"
+		local facing = rotate and GetPlayerFacing and GetPlayerFacing() or 0
+		local cosF, sinF = math.cos(-facing), math.sin(-facing)
+		local square = GetMinimapShape and GetMinimapShape() == "SQUARE"
+		local shown = 0
+		for i, st in ipairs(Stops()) do
+			if st.wx and st.cont == instance and not st.corpse then
+				-- En coordenadas de mundo, x es el norte e y el oeste
+				local east, north = py - st.wy, st.wx - px
+				if rotate then
+					east, north = east * cosF - north * sinF, east * sinF + north * cosF
+				end
+				local x, y = east / radius, north / radius
+				-- Las que caen fuera se quedan en el borde, señalando hacia dónde están
+				local edge = false
+				if square then
+					local m = math.max(math.abs(x), math.abs(y))
+					if m > 1 then x, y, edge = x / m, y / m, true end
+				else
+					local m = math.sqrt(x * x + y * y)
+					if m > 0.95 then x, y, edge = x / m * 0.95, y / m * 0.95, true end
+				end
+				shown = shown + 1
+				local pin = MiniPin(shown)
+				pin.stop = st
+				ApplyLook(pin.Icon, pin.Label, st, i, MINI_SIZE)
+				pin:SetAlpha(edge and 0.6 or 1)
+				pin:SetFrameLevel(Minimap:GetFrameLevel() + 5 + (#Stops() - i))
+				pin:ClearAllPoints()
+				pin:SetPoint("CENTER", Minimap, "CENTER", x * halfW, y * halfH)
+				pin:Show()
+			end
+		end
+		HideMiniPins(shown + 1)
+	end
+
+	function StartMinimapPins()
+		if not Minimap then return end
+		local driver = CreateFrame("Frame")
+		local wait = 0
+		driver:SetScript("OnUpdate", function(_, elapsed)
+			wait = wait - elapsed
+			if wait > 0 then return end
+			wait = 0.05
+			UpdateMinimapPins()
+		end)
+	end
 end
 
 
@@ -3499,104 +3511,108 @@ end
 -- activa para la brújula y AzerothGPS), y se quita al resucitar
 ---------------------------------------------------------------------------
 
-local deathSpot -- dónde moriste: { mapID, x, y }
+-- (Bloque del cadáver: fuera queda StartCorpseWatch.)
+local StartCorpseWatch
+do
+	local deathSpot -- dónde moriste: { mapID, x, y }
 
-local function RememberDeathSpot()
-	deathSpot = nil
-	local mapID = C_Map.GetBestMapForUnit("player")
-	local pos = mapID and C_Map.GetPlayerMapPosition(mapID, "player")
-	if pos then
-		local x, y = pos:GetXY()
-		if x and x > 0 then deathSpot = { mapID, x, y } end
-	end
-end
-
--- Si no lo apuntamos al morir (p. ej. al entrar ya como fantasma), se lo preguntamos al juego
-local function CorpseSpot()
-	if deathSpot then return unpack(deathSpot) end
-	if not (C_DeathInfo and C_DeathInfo.GetCorpseMapPosition) then return end
-	local mapID = C_Map.GetBestMapForUnit("player")
-	while mapID do
-		local pos = C_DeathInfo.GetCorpseMapPosition(mapID)
+	local function RememberDeathSpot()
+		deathSpot = nil
+		local mapID = C_Map.GetBestMapForUnit("player")
+		local pos = mapID and C_Map.GetPlayerMapPosition(mapID, "player")
 		if pos then
 			local x, y = pos:GetXY()
-			if x and x > 0 then return mapID, x, y end
+			if x and x > 0 then deathSpot = { mapID, x, y } end
 		end
-		local info = C_Map.GetMapInfo(mapID)
-		mapID = info and info.parentMapID ~= 0 and info.parentMapID or nil
 	end
-end
 
--- Quita tu cadáver de donde esté (en la Rápida; en datos antiguos, de cualquier ruta)
-local function RemoveCorpseStop()
-	local removed = false
-	for _, route in ipairs(DB.routes) do
-		for i = #route.stops, 1, -1 do
-			local st = route.stops[i]
-			if st.corpse then
-				local public = PublicStop(st)
-				table.remove(route.stops, i)
-				Fire("STOP_REMOVED", public)
-				removed = true
+	-- Si no lo apuntamos al morir (p. ej. al entrar ya como fantasma), se lo preguntamos al juego
+	local function CorpseSpot()
+		if deathSpot then return unpack(deathSpot) end
+		if not (C_DeathInfo and C_DeathInfo.GetCorpseMapPosition) then return end
+		local mapID = C_Map.GetBestMapForUnit("player")
+		while mapID do
+			local pos = C_DeathInfo.GetCorpseMapPosition(mapID)
+			if pos then
+				local x, y = pos:GetXY()
+				if x and x > 0 then return mapID, x, y end
+			end
+			local info = C_Map.GetMapInfo(mapID)
+			mapID = info and info.parentMapID ~= 0 and info.parentMapID or nil
+		end
+	end
+
+	-- Quita tu cadáver de donde esté (en la Rápida; en datos antiguos, de cualquier ruta)
+	local function RemoveCorpseStop()
+		local removed = false
+		for _, route in ipairs(DB.routes) do
+			for i = #route.stops, 1, -1 do
+				local st = route.stops[i]
+				if st.corpse then
+					local public = PublicStop(st)
+					table.remove(route.stops, i)
+					Fire("STOP_REMOVED", public)
+					removed = true
+				end
 			end
 		end
-	end
-	if removed then
-		RebuildRoute()
-		RefreshPins()
-	end
-end
-
-local function AddCorpseStop()
-	RemoveCorpseStop()
-	local mapID, x, y = CorpseSpot()
-	if not mapID then return end -- p. ej. dentro de una mazmorra
-	local zMap, zx, zy = ToZone(mapID, x, y)
-	zMap, zx, zy = zMap or mapID, zx or x, zy or y
-	local info = C_Map.GetMapInfo(zMap)
-	local zoneName = info and info.name or "?"
-	local cont, wx, wy = ToWorld(zMap, zx, zy)
-	local stop = {
-		id = NewStopId(), name = L.CORPSE, zone = zoneName, mapID = zMap, x = zx, y = zy,
-		cont = cont, wx = wx, wy = wy, corpse = true, source = "Bridge",
-		line = string.format("/way %s %.1f %.1f %s", zoneName, zx * 100, zy * 100, L.CORPSE),
-	}
-	-- En la ruta Rápida, el primero. La brújula y AzerothGPS lo ponen delante de la ruta
-	-- activa: primero recuperas el cuerpo, luego sigue la ruta que tenías.
-	table.insert(EnsureCurrentRoute().stops, 1, stop)
-	RebuildRoute()
-	RefreshPins()
-	Print(L.CORPSE_ADDED)
-	Fire("STOP_ADDED", PublicStop(stop))
-end
-
-local function OnDeathEvent(event)
-	if not DB then return end
-	if event == "PLAYER_DEAD" then
-		RememberDeathSpot()
-	elseif event == "PLAYER_ALIVE" then
-		-- Se dispara al liberar el espíritu (ya eres fantasma)
-		-- y también si te resucitan sin haberlo liberado
-		if UnitIsGhost("player") then AddCorpseStop() else RemoveCorpseStop(); deathSpot = nil end
-	elseif event == "PLAYER_UNGHOST" then
-		RemoveCorpseStop()
-		deathSpot = nil
-	end
-end
-
-local function StartCorpseWatch()
-	-- No se guarda entre sesiones: si entras siendo fantasma, se vuelve a poner
-	for _, route in ipairs(DB.routes) do
-		for i = #route.stops, 1, -1 do
-			if route.stops[i].corpse then table.remove(route.stops, i) end
+		if removed then
+			RebuildRoute()
+			RefreshPins()
 		end
 	end
-	if UnitIsGhost("player") then C_Timer.After(2, AddCorpseStop) end
-	local ev = CreateFrame("Frame")
-	ev:RegisterEvent("PLAYER_DEAD")
-	ev:RegisterEvent("PLAYER_ALIVE")
-	ev:RegisterEvent("PLAYER_UNGHOST")
-	ev:SetScript("OnEvent", function(_, event) OnDeathEvent(event) end)
+
+	local function AddCorpseStop()
+		RemoveCorpseStop()
+		local mapID, x, y = CorpseSpot()
+		if not mapID then return end -- p. ej. dentro de una mazmorra
+		local zMap, zx, zy = ToZone(mapID, x, y)
+		zMap, zx, zy = zMap or mapID, zx or x, zy or y
+		local info = C_Map.GetMapInfo(zMap)
+		local zoneName = info and info.name or "?"
+		local cont, wx, wy = ToWorld(zMap, zx, zy)
+		local stop = {
+			id = NewStopId(), name = L.CORPSE, zone = zoneName, mapID = zMap, x = zx, y = zy,
+			cont = cont, wx = wx, wy = wy, corpse = true, source = "Bridge",
+			line = string.format("/way %s %.1f %.1f %s", zoneName, zx * 100, zy * 100, L.CORPSE),
+		}
+		-- En la ruta Rápida, el primero. La brújula y AzerothGPS lo ponen delante de la ruta
+		-- activa: primero recuperas el cuerpo, luego sigue la ruta que tenías.
+		table.insert(EnsureCurrentRoute().stops, 1, stop)
+		RebuildRoute()
+		RefreshPins()
+		Print(L.CORPSE_ADDED)
+		Fire("STOP_ADDED", PublicStop(stop))
+	end
+
+	local function OnDeathEvent(event)
+		if not DB then return end
+		if event == "PLAYER_DEAD" then
+			RememberDeathSpot()
+		elseif event == "PLAYER_ALIVE" then
+			-- Se dispara al liberar el espíritu (ya eres fantasma)
+			-- y también si te resucitan sin haberlo liberado
+			if UnitIsGhost("player") then AddCorpseStop() else RemoveCorpseStop(); deathSpot = nil end
+		elseif event == "PLAYER_UNGHOST" then
+			RemoveCorpseStop()
+			deathSpot = nil
+		end
+	end
+
+	function StartCorpseWatch()
+		-- No se guarda entre sesiones: si entras siendo fantasma, se vuelve a poner
+		for _, route in ipairs(DB.routes) do
+			for i = #route.stops, 1, -1 do
+				if route.stops[i].corpse then table.remove(route.stops, i) end
+			end
+		end
+		if UnitIsGhost("player") then C_Timer.After(2, AddCorpseStop) end
+		local ev = CreateFrame("Frame")
+		ev:RegisterEvent("PLAYER_DEAD")
+		ev:RegisterEvent("PLAYER_ALIVE")
+		ev:RegisterEvent("PLAYER_UNGHOST")
+		ev:SetScript("OnEvent", function(_, event) OnDeathEvent(event) end)
+	end
 end
 
 
@@ -3604,45 +3620,49 @@ end
 -- Paradas compartidas por otros jugadores que tienen Bridge
 ---------------------------------------------------------------------------
 
-local SHARE_PREFIX = "Bridge"
+-- (Bloque de compartir: fuera queda StartSharing.)
+local StartSharing
+do
+	local SHARE_PREFIX = "Bridge"
 
-local function OnSharedStop(text, sender)
-	local version, mapID, x, y, name = strsplit("\t", text, 5)
-	if version ~= "1" then return end
-	mapID, x, y = tonumber(mapID), tonumber(x), tonumber(y)
-	if not (mapID and x and y) then return end
-	local info = C_Map.GetMapInfo(mapID)
-	if not info then return end
-	name = (name and name ~= "") and name or info.name
-	local who = Ambiguate and Ambiguate(sender, "short") or sender
-	StaticPopupDialogs.BRIDGE_SHARED_STOP = StaticPopupDialogs.BRIDGE_SHARED_STOP or {
-		text = L.SHARED_ASK,
-		button1 = L.SHARED_ADD,
-		button2 = L.SHARED_IGNORE,
-		OnAccept = function(_, data)
-			AddStop(data.mapID, data.x, data.y, data.name, false, false, { source = data.who })
-		end,
-		timeout = 60,
-		whileDead = true,
-		hideOnEscape = true,
-		preferredIndex = 3,
-	}
-	StaticPopup_Show("BRIDGE_SHARED_STOP", who, string.format("%s (%s)", name, info.name), nil,
-		{ mapID = mapID, x = x, y = y, name = name, who = who })
-end
+	local function OnSharedStop(text, sender)
+		local version, mapID, x, y, name = strsplit("\t", text, 5)
+		if version ~= "1" then return end
+		mapID, x, y = tonumber(mapID), tonumber(x), tonumber(y)
+		if not (mapID and x and y) then return end
+		local info = C_Map.GetMapInfo(mapID)
+		if not info then return end
+		name = (name and name ~= "") and name or info.name
+		local who = Ambiguate and Ambiguate(sender, "short") or sender
+		StaticPopupDialogs.BRIDGE_SHARED_STOP = StaticPopupDialogs.BRIDGE_SHARED_STOP or {
+			text = L.SHARED_ASK,
+			button1 = L.SHARED_ADD,
+			button2 = L.SHARED_IGNORE,
+			OnAccept = function(_, data)
+				AddStop(data.mapID, data.x, data.y, data.name, false, false, { source = data.who })
+			end,
+			timeout = 60,
+			whileDead = true,
+			hideOnEscape = true,
+			preferredIndex = 3,
+		}
+		StaticPopup_Show("BRIDGE_SHARED_STOP", who, string.format("%s (%s)", name, info.name), nil,
+			{ mapID = mapID, x = x, y = y, name = name, who = who })
+	end
 
-local function StartSharing()
-	if not (C_ChatInfo and C_ChatInfo.RegisterAddonMessagePrefix) then return end
-	C_ChatInfo.RegisterAddonMessagePrefix(SHARE_PREFIX)
-	local ev = CreateFrame("Frame")
-	ev:RegisterEvent("CHAT_MSG_ADDON")
-	ev:SetScript("OnEvent", function(_, _, prefix, text, _, sender)
-		if prefix ~= SHARE_PREFIX or not DB or type(text) ~= "string" then return end
-		-- Lo que mandas tú también te llega: lo ignoramos
-		local me = UnitName("player")
-		if sender == me or (Ambiguate and Ambiguate(sender or "", "none") == me) then return end
-		OnSharedStop(text, sender or "?")
-	end)
+	function StartSharing()
+		if not (C_ChatInfo and C_ChatInfo.RegisterAddonMessagePrefix) then return end
+		C_ChatInfo.RegisterAddonMessagePrefix(SHARE_PREFIX)
+		local ev = CreateFrame("Frame")
+		ev:RegisterEvent("CHAT_MSG_ADDON")
+		ev:SetScript("OnEvent", function(_, _, prefix, text, _, sender)
+			if prefix ~= SHARE_PREFIX or not DB or type(text) ~= "string" then return end
+			-- Lo que mandas tú también te llega: lo ignoramos
+			local me = UnitName("player")
+			if sender == me or (Ambiguate and Ambiguate(sender or "", "none") == me) then return end
+			OnSharedStop(text, sender or "?")
+		end)
+	end
 end
 
 ---------------------------------------------------------------------------
@@ -3779,115 +3799,177 @@ end
 SLASH_BRIDGE1 = "/bridge"
 
 -- Los comandos van siempre en inglés, sea cual sea el idioma del juego
-local ALIASES = {
-	clear = "clear", markers = "markers", size = "size", button = "button",
-	version = "version", diag = "diag", debug = "debug", copy = "copy", manage = "manage",
-	import = "import",
-}
+-- (Bloque del comando /bridge: no se usa nada de aquí fuera.)
+do
+	local ALIASES = {
+		clear = "clear", markers = "markers", size = "size", button = "button",
+		version = "version", diag = "diag", debug = "debug", copy = "copy", manage = "manage",
+		import = "import", route = "route",
+	}
 
-local HandleSlash
--- Estos comandos abren además la ventana para copiar
-local COPYABLE = { diag = true }
-SlashCmdList.BRIDGE = function(msg)
-	msg = (msg or ""):lower():match("^%s*(.-)%s*$")
-	local word, arg = msg:match("^(%S*)%s*(.-)$")
-	local cmd = ALIASES[word]
-	if cmd == "copy" then
-		ShowLog(recentLines, L.LOG_RECENT)
-		return
-	end
-	if COPYABLE[cmd] then captureBuf = {} end
-	local ok, err = pcall(HandleSlash, cmd, arg)
-	local captured = captureBuf
-	captureBuf = nil
-	if not ok then Print(L.ERROR:format(tostring(err))) end
-	if captured and #captured > 0 then ShowLog(captured, "Bridge: /bridge " .. msg) end
-end
-
-HandleSlash = function(cmd, arg)
-	if cmd == "clear" then
-		ClearStops()
-	elseif cmd == "markers" then
-		DB.showPins = not DB.showPins
-		RefreshPins()
-		Print(DB.showPins and L.MARKERS_SHOWN or L.MARKERS_HIDDEN)
-	elseif cmd == "button" and arg == "reset" then
-		DB.buttonPos = nil
-		if button then button:Place() end
-		Print(L.BUTTON_RESET)
-	elseif cmd == "button" then
-		DB.showButton = not DB.showButton
-		UpdateButton()
-		Print(DB.showButton and L.BUTTON_SHOWN or L.BUTTON_HIDDEN)
-	elseif cmd == "manage" then
-		ToggleManager()
-	elseif cmd == "import" then
-		ShowImport(TargetRoute(false))
-	elseif cmd == "version" then
-		Print(L.VERSION:format(VERSION))
-	elseif cmd == "size" then
-		local n = tonumber(arg)
-		if n and n >= 30 and n <= 200 then
-			DB.pinScale = n / 100
-			RefreshPins()
-			Print(L.SIZE_SET:format(n))
-		else
-			Print(L.SIZE_CURRENT:format(math.floor((DB.pinScale or 1) * 100 + 0.5), W.size))
-		end
-	elseif cmd == "debug" then
-		DB.debug = not DB.debug
-		Print(DB.debug and L.DEBUG_ON or L.DEBUG_OFF)
-	elseif cmd == "diag" then
-		Print(L.DIAG_HEADER:format(VERSION))
-		Print(L.DIAG_CLIENT:format(tostring(select(4, GetBuildInfo()))))
-		local api = AzerothGPS
-		Print(type(api) == "table" and L.DIAG_AGPS_LOADED:format(tostring(api.version)) or L.DIAG_AGPS_MISSING)
-		for _, slash in ipairs({ "/way", "/agps", "/tway" }) do
-			local names = {}
-			for _, h in ipairs(HandlersFor(slash)) do table.insert(names, h.key) end
-			Print(slash .. " -> " .. (#names > 0 and table.concat(names, ", ") or L.DIAG_NOBODY))
-		end
-		if ChatFrame_ImportAllListsToHash then pcall(ChatFrame_ImportAllListsToHash) end
-		local winner = hash_SlashCmdList and hash_SlashCmdList["/WAY"]
-		if winner then
-			for key, fn in pairs(SlashCmdList) do
-				if fn == winner then Print(L.DIAG_WAY_WINNER:format(key)) end
+	-- /bridge route …: buscar una ruta guardada por su nombre (sin distinguir mayúsculas).
+	-- Vale el nombre entero o un trozo, si solo coincide con una ruta. Devuelve la ruta, o
+	-- nil y cuántas coinciden (0: ninguna; 2 o más: hay que precisar).
+	local function FindSavedRoute(query)
+		query = (query or ""):lower()
+		if query == "" then return nil, 0 end
+		local partial = {}
+		for _, route in ipairs(AllRoutes()) do
+			if not route.quick then
+				local name = (route.name or ""):lower()
+				if name == query then return route end
+				if name:find(query, 1, true) then table.insert(partial, route) end
 			end
 		end
-		Print(L.DIAG_API:format(API.version))
-		Print(L.DIAG_WAY_OWN:format(wayRegistered and L.YES
-			or wayStatus == "agps" and L.DIAG_WAY_AGPS
-			or wayStatus == "other" and L.DIAG_WAY_OTHER
-			or L.NO))
-		Print(L.DIAG_TOMTOM:format(type(TomTom) == "table" and (TomTom.isBridge and L.DIAG_TOMTOM_SHIM or L.DIAG_TOMTOM_REAL) or L.NO))
-		Print(L.DIAG_QUESTIE:format(type(QuestieLoader) == "table" and L.DIAG_LOADED or L.NO))
-		-- Iconos del mapa del mundo que Bridge escucha (para Alt + clic sobre ellos)
-		local pins, hooked = 0, 0
-		HookPins(WorldMapFrame)
-		ForEachMapPin(WorldMapFrame, function() pins = pins + 1 end)
-		for _ in pairs(hookedFrames) do hooked = hooked + 1 end
-		Print(L.DIAG_PINS:format(pins, hooked))
-		Print(L.DIAG_STOPS:format(#Stops(), DB.debug and L.YES or L.NO))
-		local _, first = NextStopIndex()
-		local d = first and DistanceTo(first)
-		Print(L.DIAG_COMPASS:format(DB.showCompass and L.YES or L.NO,
-			(BridgeCompass and BridgeCompass:IsShown()) and L.YES or L.NO,
-			d and string.format("%d yd", math.floor(d + 0.5)) or "-"))
-	else
-		Print(L.HELP_HEADER:format(VERSION))
-		local lines = {
-			{ W.manage, L.HELP_MANAGE },
-			{ W.import, L.HELP_IMPORT },
-			{ W.clear, L.HELP_CLEAR },
-			{ W.markers, L.HELP_MARKERS },
-			{ W.size .. " N", L.HELP_SIZE },
-			{ W.button, L.HELP_BUTTON },
-			{ W.button .. " " .. W.reset, L.HELP_BUTTON_RESET },
-			{ W.version, L.HELP_VERSION },
-		}
-		for _, l in ipairs(lines) do Print("  /bridge " .. l[1] .. " - " .. l[2]) end
-		Print("  " .. L.HELP_DEV:format(W.copy))
-		Print(L.HELP_MAP)
+		if #partial == 1 then return partial[1] end
+		return nil, #partial
+	end
+
+	local function RouteCommand(arg, rawArg)
+		local sub = (arg:match("^(%S*)") or "")
+		local rest = rawArg:match("^%S*%s*(.-)$") or ""
+		if sub == W.list then
+			Print(L.ROUTE_LIST_HEADER)
+			for _, route in ipairs(AllRoutes()) do
+				local tags = {}
+				if route.shared then table.insert(tags, L.ROUTE_TAG_SHARED) end
+				if not route.quick and DB.loadedRoute == route.id then table.insert(tags, L.ROUTE_TAG_LOADED) end
+				Print(string.format("  %s%s (%d)%s", route.quick and "» " or "", route.name or "?", #route.stops,
+					#tags > 0 and (" |cff999999– " .. table.concat(tags, ", ") .. "|r") or ""))
+			end
+		elseif sub == W.load or sub == W.new then
+			if rest == "" then
+				Print(L.ROUTE_USAGE)
+			elseif sub == W.new then
+				CreateRoute(rest)
+			else
+				local route, matches = FindSavedRoute(rest)
+				if route then
+					LoadRoute(route)
+				else
+					Print((matches > 1 and L.ROUTE_AMBIGUOUS or L.ROUTE_NOT_FOUND):format(rest))
+				end
+			end
+		elseif sub == W.restart then
+			RestartRoute(ActiveRoute())
+		else
+			Print(L.ROUTE_USAGE)
+		end
+	end
+
+	local HandleSlash
+	-- Estos comandos abren además la ventana para copiar
+	local COPYABLE = { diag = true }
+	SlashCmdList.BRIDGE = function(msg)
+		-- El texto tal cual (para nombres, p. ej. /bridge route new Herboristería) y en minúsculas
+		local raw = (msg or ""):match("^%s*(.-)%s*$")
+		local rawArg = raw:match("^%S*%s*(.-)$") or ""
+		msg = raw:lower()
+		local word, arg = msg:match("^(%S*)%s*(.-)$")
+		local cmd = ALIASES[word]
+		if cmd == "copy" then
+			ShowLog(recentLines, L.LOG_RECENT)
+			return
+		end
+		if COPYABLE[cmd] then captureBuf = {} end
+		local ok, err = pcall(HandleSlash, cmd, arg, rawArg)
+		local captured = captureBuf
+		captureBuf = nil
+		if not ok then Print(L.ERROR:format(tostring(err))) end
+		if captured and #captured > 0 then ShowLog(captured, "Bridge: /bridge " .. msg) end
+	end
+
+	HandleSlash = function(cmd, arg, rawArg)
+		if cmd == "route" then
+			RouteCommand(arg, rawArg)
+		elseif cmd == "clear" then
+			ClearStops()
+		elseif cmd == "markers" then
+			DB.showPins = not DB.showPins
+			RefreshPins()
+			Print(DB.showPins and L.MARKERS_SHOWN or L.MARKERS_HIDDEN)
+		elseif cmd == "button" and arg == "reset" then
+			DB.buttonPos = nil
+			if button then button:Place() end
+			Print(L.BUTTON_RESET)
+		elseif cmd == "button" then
+			DB.showButton = not DB.showButton
+			UpdateButton()
+			Print(DB.showButton and L.BUTTON_SHOWN or L.BUTTON_HIDDEN)
+		elseif cmd == "manage" then
+			ToggleManager()
+		elseif cmd == "import" then
+			ShowImport(TargetRoute(false))
+		elseif cmd == "version" then
+			Print(L.VERSION:format(VERSION))
+		elseif cmd == "size" then
+			local n = tonumber(arg)
+			if n and n >= 30 and n <= 200 then
+				DB.pinScale = n / 100
+				RefreshPins()
+				Print(L.SIZE_SET:format(n))
+			else
+				Print(L.SIZE_CURRENT:format(math.floor((DB.pinScale or 1) * 100 + 0.5), W.size))
+			end
+		elseif cmd == "debug" then
+			DB.debug = not DB.debug
+			Print(DB.debug and L.DEBUG_ON or L.DEBUG_OFF)
+		elseif cmd == "diag" then
+			Print(L.DIAG_HEADER:format(VERSION))
+			Print(L.DIAG_CLIENT:format(tostring(select(4, GetBuildInfo()))))
+			local api = AzerothGPS
+			Print(type(api) == "table" and L.DIAG_AGPS_LOADED:format(tostring(api.version)) or L.DIAG_AGPS_MISSING)
+			for _, slash in ipairs({ "/way", "/agps", "/tway" }) do
+				local names = {}
+				for _, h in ipairs(HandlersFor(slash)) do table.insert(names, h.key) end
+				Print(slash .. " -> " .. (#names > 0 and table.concat(names, ", ") or L.DIAG_NOBODY))
+			end
+			if ChatFrame_ImportAllListsToHash then pcall(ChatFrame_ImportAllListsToHash) end
+			local winner = hash_SlashCmdList and hash_SlashCmdList["/WAY"]
+			if winner then
+				for key, fn in pairs(SlashCmdList) do
+					if fn == winner then Print(L.DIAG_WAY_WINNER:format(key)) end
+				end
+			end
+			Print(L.DIAG_API:format(API.version))
+			Print(L.DIAG_WAY_OWN:format(wayRegistered and L.YES
+				or wayStatus == "agps" and L.DIAG_WAY_AGPS
+				or wayStatus == "other" and L.DIAG_WAY_OTHER
+				or L.NO))
+			Print(L.DIAG_TOMTOM:format(type(TomTom) == "table" and (TomTom.isBridge and L.DIAG_TOMTOM_SHIM or L.DIAG_TOMTOM_REAL) or L.NO))
+			Print(L.DIAG_QUESTIE:format(type(QuestieLoader) == "table" and L.DIAG_LOADED or L.NO))
+			-- Iconos del mapa del mundo que Bridge escucha (para Alt + clic sobre ellos)
+			local pins, hooked = 0, 0
+			HookPins(WorldMapFrame)
+			ForEachMapPin(WorldMapFrame, function() pins = pins + 1 end)
+			for _ in pairs(hookedFrames) do hooked = hooked + 1 end
+			Print(L.DIAG_PINS:format(pins, hooked))
+			Print(L.DIAG_STOPS:format(#Stops(), DB.debug and L.YES or L.NO))
+			local _, first = NextStopIndex()
+			local d = first and DistanceTo(first)
+			Print(L.DIAG_COMPASS:format(DB.showCompass and L.YES or L.NO,
+				(BridgeCompass and BridgeCompass:IsShown()) and L.YES or L.NO,
+				d and string.format("%d yd", math.floor(d + 0.5)) or "-"))
+		else
+			Print(L.HELP_HEADER:format(VERSION))
+			local lines = {
+				{ W.manage, L.HELP_MANAGE },
+				{ W.import, L.HELP_IMPORT },
+				{ W.route .. " " .. W.list, L.HELP_ROUTE_LIST },
+				{ W.route .. " " .. W.load .. " " .. L.HELP_NAME, L.HELP_ROUTE_LOAD },
+				{ W.route .. " " .. W.new .. " " .. L.HELP_NAME, L.HELP_ROUTE_NEW },
+				{ W.route .. " " .. W.restart, L.HELP_ROUTE_RESTART },
+				{ W.clear, L.HELP_CLEAR },
+				{ W.markers, L.HELP_MARKERS },
+				{ W.size .. " N", L.HELP_SIZE },
+				{ W.button, L.HELP_BUTTON },
+				{ W.button .. " " .. W.reset, L.HELP_BUTTON_RESET },
+				{ W.version, L.HELP_VERSION },
+			}
+			for _, l in ipairs(lines) do Print("  /bridge " .. l[1] .. " - " .. l[2]) end
+			Print("  " .. L.HELP_DEV:format(W.copy))
+			Print(L.HELP_MAP)
+		end
 	end
 end
 

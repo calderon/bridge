@@ -98,6 +98,10 @@ Almost everything is done from the map and the button.
 | `/bridge` | Help. |
 | `/bridge manage` | Open the "Manage routes" window. |
 | `/bridge import` | Paste a list of `/way` lines to add them as stops. |
+| `/bridge route list` | List your routes. |
+| `/bridge route load <name>` | Load a saved route into the Current route (part of the name is enough if only one route matches). |
+| `/bridge route new <name>` | Create an empty route. |
+| `/bridge route restart` | Restart the Current route. |
 | `/bridge clear` | Empty the Current route (your corpse stays). |
 | `/bridge markers` | Show or hide the markers (map and minimap). |
 | `/bridge size N` | Marker size, 30 to 200 (%). |
@@ -248,6 +252,10 @@ Casi todo se hace desde el mapa y el botón. Los comandos se escriben siempre en
 | `/bridge` | Ayuda. |
 | `/bridge manage` | Abrir la ventana "Gestionar rutas". |
 | `/bridge import` | Pegar una lista de líneas `/way` para añadirlas como paradas. |
+| `/bridge route list` | Ver tus rutas. |
+| `/bridge route load <nombre>` | Cargar una ruta guardada en la Ruta actual (basta con parte del nombre si solo coincide una ruta). |
+| `/bridge route new <nombre>` | Crear una ruta vacía. |
+| `/bridge route restart` | Reiniciar la Ruta actual. |
 | `/bridge clear` | Vaciar la Ruta actual (tu cadáver se queda). |
 | `/bridge markers` | Mostrar u ocultar los marcadores (mapa y minimapa). |
 | `/bridge size N` | Tamaño de los marcadores, de 30 a 200 (%). |
