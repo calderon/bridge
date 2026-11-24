@@ -27,9 +27,14 @@ local PIN_TEXTURE = "Interface\\AddOns\\Bridge\\Media\\pin"
 local PIN_TEXTURE_HOVER = "Interface\\AddOns\\Bridge\\Media\\pin_hover"
 
 -- Aspecto de un marcador: pin verde con su número
+-- Ya alcanzada en el recorrido: en gris (sin color y algo transparente) hasta reiniciar
 local function ApplyLook(icon, label, stop, number, size, hover)
 	icon:SetTexture(hover and PIN_TEXTURE_HOVER or PIN_TEXTURE)
 	label:SetText(number or "")
+	local reached = stop and stop.reached and true or false
+	icon:SetDesaturated(reached)
+	icon:SetAlpha(reached and 0.6 or 1)
+	label:SetAlpha(reached and 0.6 or 1)
 end
 
 local DB
@@ -1493,6 +1498,7 @@ function BridgePinMixin:FillTooltip()
 	GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
 	GameTooltip:SetText(stop.name or "?", 1, 0.82, 0)
 	if stop.desc then GameTooltip:AddLine(stop.desc, 0.9, 0.9, 0.9, true) end
+	if stop.reached then GameTooltip:AddLine(L.REACHED_TIP, 0.6, 0.6, 0.6) end
 	local d = DistanceTo(stop)
 	if d then
 		GameTooltip:AddLine(FormatDistance(d), 1, 1, 1)
@@ -2590,7 +2596,15 @@ local function CreateManager()
 			row.Name:SetText(st.name or "?")
 			local match = self.filtering and StopMatches(st, filter)
 			row.Match:SetShown(match)
-			if match then row.Name:SetTextColor(1, 0.82, 0) else row.Name:SetTextColor(1, 1, 1) end
+			if match then
+				row.Name:SetTextColor(1, 0.82, 0)
+			elseif st.reached then
+				row.Name:SetTextColor(0.5, 0.5, 0.5)
+			else
+				row.Name:SetTextColor(1, 1, 1)
+			end
+			row.Desc:SetAlpha(st.reached and 0.6 or 1)
+			row.Zone:SetAlpha(st.reached and 0.6 or 1)
 			row.Zone:SetText(string.format("%s (%.1f, %.1f)", st.zone or "?", (st.x or 0) * 100, (st.y or 0) * 100))
 			row.Desc:SetText(st.desc or "")
 			row:Layout(st.desc ~= nil)
@@ -3090,6 +3104,7 @@ local function MiniPin(i)
 		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
 		GameTooltip:SetText(st.name or "?", 1, 0.82, 0)
 		if st.desc then GameTooltip:AddLine(st.desc, 0.9, 0.9, 0.9, true) end
+		if st.reached then GameTooltip:AddLine(L.REACHED_TIP, 0.6, 0.6, 0.6) end
 		local d = DistanceTo(st)
 		if d then GameTooltip:AddLine(FormatDistance(d), 1, 1, 1) end
 		GameTooltip:Show()
