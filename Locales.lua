@@ -18,6 +18,7 @@ local L = {
 	DIRECT_ROUTE = "Direct route to",
 	STOP_MOVED = "Stop moved",
 	STOP_MOVED_TO = "Stop moved: %s → %s",
+	STOP_COPIED_TO = "Stop copied: %s → %s",
 	STOP_REMOVED = "Stop removed: %s",
 	ROUTE_CLEARED = "All stops cleared.",
 	STOPS_REMOVED = "%d stops removed.",
@@ -64,8 +65,9 @@ local L = {
 	ROUTE_DELETE_CONFIRM_EMPTY = "Delete the route “%s”? It has no stops.",
 	ROUTE_DELETED = "Route deleted: %s",
 	ROUTE_LAST = "The last route can't be deleted.",
-	MANAGER_HINT = "Click: show on the map · Drag: reorder, or onto a route to move it there · Right-click: menu",
+	MANAGER_HINT = "Click: show on the map · Drag: reorder, or onto a route to move it (Shift: copy) · Right-click: menu",
 	MENU_MOVE_TO = "Move to",
+	MENU_COPY_TO = "Copy to",
 
 	-- Importar una lista de /way
 	IMPORT_OPEN = "Import /way list",
@@ -189,6 +191,7 @@ if locale == "esES" or locale == "esMX" then
 	L.DIRECT_ROUTE = "Ruta directa a"
 	L.STOP_MOVED = "Parada movida"
 	L.STOP_MOVED_TO = "Parada movida: %s → %s"
+	L.STOP_COPIED_TO = "Parada copiada: %s → %s"
 	L.STOP_REMOVED = "Parada quitada: %s"
 	L.ROUTE_CLEARED = "Paradas borradas."
 	L.STOPS_REMOVED = "%d paradas quitadas."
@@ -233,8 +236,9 @@ if locale == "esES" or locale == "esMX" then
 	L.ROUTE_DELETE_CONFIRM_EMPTY = "¿Borrar la ruta «%s»? No tiene paradas."
 	L.ROUTE_DELETED = "Ruta borrada: %s"
 	L.ROUTE_LAST = "No se puede borrar la última ruta."
-	L.MANAGER_HINT = "Clic: ver en el mapa · Arrastrar: reordenar, o sobre una ruta para moverla allí · Clic derecho: menú"
+	L.MANAGER_HINT = "Clic: ver en el mapa · Arrastrar: reordenar, o sobre una ruta para moverla (Mayús: copiar) · Clic derecho: menú"
 	L.MENU_MOVE_TO = "Mover a"
+	L.MENU_COPY_TO = "Copiar a"
 
 	L.IMPORT_OPEN = "Importar lista /way"
 	L.IMPORT_TITLE_ROUTE = "Importar lista de /way en «%s»"

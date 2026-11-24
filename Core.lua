@@ -765,6 +765,23 @@ local function MoveStopToRoute(stop, from, to)
 	return true
 end
 
+-- Copiar una parada a otra ruta (al final de esa ruta). La original se queda.
+-- La copia es una parada nueva (otro id) y empieza sin alcanzar. Tu cadáver no se copia.
+local function CopyStopToRoute(stop, to)
+	if not (stop and to) or stop.corpse then return end
+	local copy = {}
+	for k, v in pairs(stop) do copy[k] = v end
+	copy.id, copy.reached = NewStopId(), nil
+	table.insert(to.stops, copy)
+	if IsActiveRoute(to) then
+		if copy.line then SendToGPS(copy.line) end
+		Fire("STOP_ADDED", PublicStop(copy))
+	end
+	RefreshPins()
+	Print(L.STOP_COPIED_TO:format(copy.name or "?", to.name or "?"))
+	return copy
+end
+
 -- Borrar una ruta con sus paradas. Nunca la última. Si era la activa, se activa otra
 -- (ActivateRoute se lleva también tu cadáver, si lo hay).
 local function DeleteRoute(route)
@@ -2091,18 +2108,22 @@ local function CreateManagerRow(f, slot)
 	row:SetScript("OnClick", function(self, mouseButton)
 		if self.wasDragged then self.wasDragged = false return end
 		if mouseButton == "RightButton" then
-			-- Menú contextual: editar, "Mover a ▸" con las demás rutas y, separado al final, quitar
-			local stop, from, targets = self.stop, f:Route(), {}
+			-- Menú contextual: editar, "Mover a ▸" y "Copiar a ▸" con las demás rutas y, separado al final, quitar
+			local stop, from, targets, copyTargets = self.stop, f:Route(), {}, {}
 			for _, route in ipairs(DB.routes) do
 				if route ~= from then
 					table.insert(targets, { text = route.name or "?", func = function()
 						MoveStopToRoute(stop, from, route)
+					end })
+					table.insert(copyTargets, { text = route.name or "?", func = function()
+						CopyStopToRoute(stop, route)
 					end })
 				end
 			end
 			ShowMenu(self, {
 				{ text = L.MENU_RENAME, func = self.Edit },
 				{ text = L.MENU_MOVE_TO, sub = targets, disabled = #targets == 0 or stop.corpse },
+				{ text = L.MENU_COPY_TO, sub = copyTargets, disabled = #copyTargets == 0 or stop.corpse },
 				{ separator = true },
 				{ text = L.MENU_REMOVE, func = self.Remove_ },
 			}, function(menu) menu:SetPoint("TOPLEFT", self, "BOTTOMLEFT", 40, 4) end, true)
@@ -2130,7 +2151,12 @@ local function CreateManagerRow(f, slot)
 		for _, r in ipairs(f.routeRows) do r.DropTarget:Hide() end
 		if dropRoute then
 			f.dropIndex = nil
-			MoveStopToRoute(self.stop, f:Route(), dropRoute)
+			-- Con Mayús pulsada al soltar, se copia (la original se queda)
+			if IsShiftKeyDown() then
+				CopyStopToRoute(self.stop, dropRoute)
+			else
+				MoveStopToRoute(self.stop, f:Route(), dropRoute)
+			end
 			return
 		end
 		local from, target = self.index, f.dropIndex
@@ -2394,6 +2420,12 @@ local function CreateManager()
 		for _, r in ipairs(f.routeRows) do
 			local hit = r:IsShown() and r.route ~= f:Route() and r:IsMouseOver()
 			r.DropTarget:SetShown(hit)
+			-- Verde: se moverá. Azul (con Mayús): se copiará.
+			if IsShiftKeyDown() then
+				r.DropTarget:SetColorTexture(0.3, 0.6, 1, 0.35)
+			else
+				r.DropTarget:SetColorTexture(0.2, 1, 0.2, 0.3)
+			end
 			if hit then over = r.route end
 		end
 		f.dropRoute = over
