@@ -19,7 +19,7 @@ Each place you mark is a **stop**: add it with a click, give it a name, and see 
 * **Compass**: an on-screen arrow with the next stop's name, distance and estimated time of arrival.
 * **Arrival notice**: an on-screen banner, *"You have arrived at… · Next stop: …"*, with a line in chat and a sound. It can be turned off.
 * **Your corpse**: when you die and release your spirit, your body becomes the first stop; it goes away when you resurrect.
-* **Manage stops**: a window to search, reorder, rename and remove stops.
+* **Manage routes**: a window with your routes and their stops: search, reorder, rename and remove stops.
 * **Sharing**: send a stop to your party, raid or guild; players with Bridge can add it with one click.
 * **`/way` commands**: type coordinates in chat and they become stops.
 * **Import `/way` lists**: paste a list of `/way` lines from a guide or website and they all become stops, in order.
@@ -62,7 +62,7 @@ When you add a stop, a small box shows a suggested name: **Enter** accepts it (o
 It sits at the top right of the world map. Click it to open its menu:
 
 * **Turn on route mode**: while it is on (the button glows green), a plain click adds stops. It turns off when you close the map.
-* **Manage stops…**: a window with all your stops. Search by name or zone, jump to one on the map (its pin flashes), edit its name and description, remove it, and reorder with ▲▼ or by dragging rows. The **Import /way list** button opens a box where you can paste many `/way` lines at once: each one becomes a stop, in order (with or without `/way` in front). Lines repeating a stop you already have are skipped, and you can tick a box to clear your current stops first.
+* **Manage routes…**: on the left, your routes (the active one has a green dot); on the right, the stops of the route you select. Search by name or zone, jump to one on the map (its pin flashes), edit its name and description, remove it, and reorder with ▲▼ or by dragging rows. The **Import /way list** button opens a box where you can paste many `/way` lines at once: each one becomes a stop, in order (with or without `/way` in front). Lines repeating a stop you already have are skipped, and you can tick a box to clear your current stops first.
 * **Clear stops** ▸ **In this zone** (the one shown on the map) or **All**.
 * **Units** ▸ **Yards** or **Meters**. Meters by default (yards if the game is in US English).
 * **Show compass** (off by default).
@@ -88,7 +88,7 @@ Almost everything is done from the map and the button.
 | Command | Result |
 |---|---|
 | `/bridge` | Help. |
-| `/bridge manage` | Open the "Manage stops" window. |
+| `/bridge manage` | Open the "Manage routes" window. |
 | `/bridge import` | Paste a list of `/way` lines to add them as stops. |
 | `/bridge clear` | Clear all stops. |
 | `/bridge markers` | Show or hide the markers (map and minimap). |
@@ -161,7 +161,7 @@ Cada sitio que marcas es una **parada**: la pones con un clic, le das un nombre 
 * **Brújula**: flecha en pantalla con el nombre de la siguiente parada, la distancia y el tiempo estimado de llegada.
 * **Aviso al llegar**: un cartel en pantalla, *"Has llegado a… · Siguiente parada: …"*, con una línea en el chat y un sonido. Se puede desactivar.
 * **Tu cadáver**: al morir y liberar el espíritu, tu cuerpo pasa a ser la primera parada; se quita al resucitar.
-* **Gestionar paradas**: una ventana para buscar, ordenar, renombrar y quitar paradas.
+* **Gestionar rutas**: una ventana con tus rutas y sus paradas: buscar, ordenar, renombrar y quitar paradas.
 * **Compartir**: manda una parada a tu grupo, banda o hermandad; quien tenga Bridge puede añadirla con un clic.
 * **Comandos `/way`**: escribe coordenadas en el chat y se convierten en paradas.
 * **Importar listas de `/way`**: pega una lista de líneas `/way` de una guía o una web y todas se convierten en paradas, en orden.
@@ -204,7 +204,7 @@ Al añadir una parada sale una cajita con un nombre propuesto: **Intro** acepta 
 Está arriba a la derecha del mapa del mundo. Haz clic para abrir su menú:
 
 * **Activar modo ruta**: mientras está activo (el botón brilla en verde), basta un clic normal para añadir paradas. Se desactiva al cerrar el mapa.
-* **Gestionar paradas…**: ventana con todas tus paradas. Puedes buscarlas por nombre o zona, ir a una en el mapa (su pin parpadea), editar su nombre y descripción, quitarla y cambiar el orden con ▲▼ o arrastrando las filas. El botón **Importar lista /way** abre un cuadro donde puedes pegar muchas líneas `/way` a la vez: cada una se convierte en una parada, en orden (con o sin `/way` delante). Las líneas que repiten una parada que ya tienes se saltan, y puedes marcar una casilla para borrar antes tus paradas actuales.
+* **Gestionar rutas…**: a la izquierda, tus rutas (la activa lleva un punto verde); a la derecha, las paradas de la ruta que elijas. Puedes buscarlas por nombre o zona, ir a una en el mapa (su pin parpadea), editar su nombre y descripción, quitarla y cambiar el orden con ▲▼ o arrastrando las filas. El botón **Importar lista /way** abre un cuadro donde puedes pegar muchas líneas `/way` a la vez: cada una se convierte en una parada, en orden (con o sin `/way` delante). Las líneas que repiten una parada que ya tienes se saltan, y puedes marcar una casilla para borrar antes tus paradas actuales.
 * **Borrar paradas** ▸ **De la zona** (la que se ve en el mapa) o **Todas**.
 * **Unidades** ▸ **Yardas** o **Metros**. De entrada, metros (yardas si el juego está en inglés de EE. UU.).
 * **Mostrar brújula** (desactivada de entrada).
@@ -230,7 +230,7 @@ Casi todo se hace desde el mapa y el botón. Los comandos se escriben siempre en
 | Comando | Qué hace |
 |---|---|
 | `/bridge` | Ayuda. |
-| `/bridge manage` | Abrir la ventana "Gestionar paradas". |
+| `/bridge manage` | Abrir la ventana "Gestionar rutas". |
 | `/bridge import` | Pegar una lista de líneas `/way` para añadirlas como paradas. |
 | `/bridge clear` | Borrar todas las paradas. |
 | `/bridge markers` | Mostrar u ocultar los marcadores (mapa y minimapa). |

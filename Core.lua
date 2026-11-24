@@ -61,6 +61,16 @@ local function Stops()
 	return ActiveRoute().stops
 end
 
+-- Para actuar sobre una ruta concreta (la ventana Gestionar rutas): sin ruta, la activa.
+-- Solo la activa se manda a AzerothGPS, al mapa, a la brújula y a los eventos de la API.
+local function StopsOf(route)
+	return (route or ActiveRoute()).stops
+end
+
+local function IsActiveRoute(route)
+	return not route or route.id == ActiveRoute().id
+end
+
 -- Recorrido: al llegar a una parada se marca como alcanzada (st.reached) en vez de
 -- borrarla. La siguiente del recorrido es la primera que aún no se ha alcanzado.
 local function NextStopIndex(after)
@@ -92,7 +102,7 @@ end
 
 local routeMode = false
 local providers = {}
-local managerFrame -- ventana "Gestionar paradas" (se crea al abrirla por primera vez)
+local managerFrame -- ventana "Gestionar rutas" (se crea al abrirla por primera vez)
 
 -- Últimas líneas escritas por Bridge (para poder copiarlas) y captura de un comando
 local recentLines = {}
@@ -364,28 +374,30 @@ local function CleanName(name)
 end
 
 -- Añade la parada ya con su nombre definitivo
+-- opts.route: añadirla a esa ruta en vez de a la activa
 local function CommitStop(zMap, zx, zy, zoneName, name, exclusive, opts)
 	opts = opts or {}
-	if exclusive then
+	local active = IsActiveRoute(opts.route)
+	if exclusive and active then
 		SendToGPS("/agps clear")
 		wipe(Stops())
 		Fire("STOPS_CLEARED")
 	end
 	local line = string.format("/way %s %.1f %.1f %s", zoneName, zx * 100, zy * 100, name)
-	if SendToGPS(line) then
+	if not active or SendToGPS(line) then
 		local cont, wx, wy = ToWorld(zMap, zx, zy)
 		local stop = {
 			id = NewStopId(), name = name, zone = zoneName, mapID = zMap, x = zx, y = zy,
 			cont = cont, wx = wx, wy = wy, line = line, source = opts.source,
 			desc = CleanName(opts.description),
 		}
-		table.insert(Stops(), stop)
+		table.insert(StopsOf(opts.route), stop)
 		if not opts.silent then
 			Print(string.format("%s: |cffffd100%s|r (%s %.1f, %.1f)",
 				exclusive and L.DIRECT_ROUTE or L.STOP_ADDED, name, zoneName, zx * 100, zy * 100))
 		end
 		RefreshPins()
-		Fire("STOP_ADDED", PublicStop(stop))
+		if active then Fire("STOP_ADDED", PublicStop(stop)) end
 		return stop
 	else
 		Print(L.SEND_FAILED)
@@ -523,23 +535,26 @@ local function RebuildRoute()
 	end)
 end
 
-local function RemoveStop(index)
-	local s = Stops()[index]
+local function RemoveStop(index, route)
+	local stops = StopsOf(route)
+	local s = stops[index]
 	if not s then return end
-	local public = PublicStop(s)
-	table.remove(Stops(), index)
-	RebuildRoute()
+	local active = IsActiveRoute(route)
+	local public = active and PublicStop(s)
+	table.remove(stops, index)
+	if active then RebuildRoute() end
 	RefreshPins()
 	Print(L.STOP_REMOVED:format(s.name or "?"))
-	Fire("STOP_REMOVED", public)
+	if active then Fire("STOP_REMOVED", public) end
 end
 
-local function ClearStops(silent)
-	SendToGPS("/agps clear")
-	wipe(Stops())
+local function ClearStops(silent, route)
+	local active = IsActiveRoute(route)
+	if active then SendToGPS("/agps clear") end
+	wipe(StopsOf(route))
 	RefreshPins()
 	if not silent then Print(L.ROUTE_CLEARED) end
-	Fire("STOPS_CLEARED")
+	if active then Fire("STOPS_CLEARED") end
 end
 
 -- Quita de golpe todas las paradas que cumplan 'match' (una sola reconstrucción)
@@ -560,8 +575,9 @@ local function RemoveStopsWhere(match)
 end
 
 -- Cambia el nombre y, si se pasa (aunque sea nil, para quitarla), la descripción
-local function RenameStop(index, newName, newDesc, setDesc)
-	local s = Stops()[index]
+local function RenameStop(index, newName, newDesc, setDesc, route)
+	local s = StopsOf(route)[index]
+	local active = IsActiveRoute(route)
 	if not s or not newName then return end
 	local nameChanged = newName ~= s.name
 	local descChanged = setDesc and newDesc ~= s.desc
@@ -570,11 +586,11 @@ local function RenameStop(index, newName, newDesc, setDesc)
 	if nameChanged then
 		s.name = newName
 		s.line = string.format("/way %s %.1f %.1f %s", s.zone, s.x * 100, s.y * 100, newName)
-		RebuildRoute() -- AzerothGPS necesita el nombre nuevo
+		if active then RebuildRoute() end -- AzerothGPS necesita el nombre nuevo
 	end
 	RefreshPins()
 	Print((nameChanged and L.STOP_RENAMED or L.STOP_EDITED):format(newName))
-	Fire("STOP_CHANGED", PublicStop(s))
+	if active then Fire("STOP_CHANGED", PublicStop(s)) end
 	return true
 end
 
@@ -799,8 +815,8 @@ end
 ---------------------------------------------------------------------------
 
 -- ¿Ya hay una parada en ese sitio? (mismo criterio que /way)
-local function StopExistsAt(mapID, x, y)
-	for _, s in ipairs(Stops()) do
+local function StopExistsAt(mapID, x, y, route)
+	for _, s in ipairs(StopsOf(route)) do
 		if s.mapID == mapID and math.abs(s.x - x) < 0.002 and math.abs(s.y - y) < 0.002 then return true end
 	end
 	return false
@@ -808,9 +824,10 @@ end
 
 -- Cada línea con coordenadas se convierte en una parada, en orden. Vale con o sin
 -- "/way" delante (y "/tway" de TomTom); las líneas vacías no cuentan.
-local function ImportWayLines(text, clearFirst)
+-- route: la ruta donde se importa (sin ruta, la activa)
+local function ImportWayLines(text, clearFirst, route)
 	local added, repeated, bad = 0, 0, 0
-	if clearFirst then ClearStops(true) end
+	if clearFirst then ClearStops(true, route) end
 	for raw in (text or ""):gmatch("[^\r\n]+") do
 		local line = raw:match("^%s*(.-)%s*$")
 		if line ~= "" then
@@ -828,9 +845,9 @@ local function ImportWayLines(text, clearFirst)
 			end
 			if not mapID then
 				bad = bad + 1
-			elseif StopExistsAt(mapID, x, y) then
+			elseif StopExistsAt(mapID, x, y, route) then
 				repeated = repeated + 1
-			elseif AddStop(mapID, x, y, name, false, false, { source = "import", silent = true }) then
+			elseif AddStop(mapID, x, y, name, false, false, { source = "import", silent = true, route = route }) then
 				added = added + 1
 			else
 				bad = bad + 1
@@ -845,7 +862,8 @@ local function ImportWayLines(text, clearFirst)
 end
 
 local importFrame
-local function ShowImport()
+-- route: la ruta donde se importa (sin ruta, la activa)
+local function ShowImport(route)
 	if not importFrame then
 		local f = CreateFrame("Frame", "BridgeImportFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
 		f:SetSize(560, 380)
@@ -874,7 +892,7 @@ local function ShowImport()
 
 		local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 		title:SetPoint("TOP", 0, -18)
-		title:SetText(L.IMPORT_TITLE)
+		f.Title = title
 		local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
 		close:SetPoint("TOPRIGHT", -6, -6)
 
@@ -932,7 +950,7 @@ local function ShowImport()
 		import:SetPoint("RIGHT", cancel, "LEFT", -8, 0)
 		import:SetText(L.IMPORT_BUTTON)
 		import:SetScript("OnClick", function()
-			ImportWayLines(eb:GetText(), check:GetChecked())
+			ImportWayLines(eb:GetText(), check:GetChecked(), f.route)
 			f:Hide()
 		end)
 
@@ -945,6 +963,9 @@ local function ShowImport()
 		f:Hide()
 		importFrame = f
 	end
+	-- El título dice en qué ruta se importa
+	importFrame.route = route
+	importFrame.Title:SetText(L.IMPORT_TITLE_ROUTE:format((route or ActiveRoute()).name or "?"))
 	importFrame:Show()
 end
 
@@ -1681,26 +1702,29 @@ OpenStopMenu = function(pin)
 end
 
 ---------------------------------------------------------------------------
--- Ventana "Gestionar paradas": lista con filtro, ir a una parada, renombrar,
--- quitar y reordenar (botones ▲▼ o arrastrando las filas)
+-- Ventana "Gestionar rutas": a la izquierda las rutas, a la derecha los waypoints de
+-- la ruta elegida (filtro, ir a uno en el mapa, editar, quitar, reordenar con ▲▼ o
+-- arrastrando, importar). Lo que se hace aquí actúa sobre la ruta elegida.
 ---------------------------------------------------------------------------
 
 local ROW_HEIGHT = 36 -- dos líneas: nombre, y debajo zona y coordenadas
 
 -- Cambia una parada de posición y rehace la ruta de AzerothGPS en el orden nuevo
-local function MoveStopTo(from, to)
-	local n = #Stops()
-	if not Stops()[from] or to < 1 or to > n or to == from then return end
-	local s = table.remove(Stops(), from)
-	table.insert(Stops(), to, s)
-	RebuildRoute()
+local function MoveStopTo(from, to, route)
+	local stops = StopsOf(route)
+	local n = #stops
+	if not stops[from] or to < 1 or to > n or to == from then return end
+	local s = table.remove(stops, from)
+	table.insert(stops, to, s)
+	local active = IsActiveRoute(route)
+	if active then RebuildRoute() end
 	RefreshPins()
-	Fire("STOPS_REORDERED")
+	if active then Fire("STOPS_REORDERED") end
 	return true
 end
 
-local function IndexOf(stop)
-	for i, st in ipairs(Stops()) do
+local function IndexOf(stop, route)
+	for i, st in ipairs(StopsOf(route)) do
 		if st == stop then return i end
 	end
 end
@@ -1797,13 +1821,15 @@ local function CreateManagerRow(f, slot)
 
 	-- Al principio: subir y bajar
 	row.Up = IconButton(row, "Interface\\ChatFrame\\UI-ChatIcon-ScrollUp-Up", L.TIP_UP, function()
-		local i = IndexOf(row.stop)
-		if i then MoveStopTo(i, i - 1) end
+		local route = f:Route()
+		local i = IndexOf(row.stop, route)
+		if i then MoveStopTo(i, i - 1, route) end
 	end)
 	row.Up:SetPoint("TOPLEFT", 2, -2)
 	row.Down = IconButton(row, "Interface\\ChatFrame\\UI-ChatIcon-ScrollDown-Up", L.TIP_DOWN, function()
-		local i = IndexOf(row.stop)
-		if i then MoveStopTo(i, i + 1) end
+		local route = f:Route()
+		local i = IndexOf(row.stop, route)
+		if i then MoveStopTo(i, i + 1, route) end
 	end)
 	row.Down:SetPoint("TOP", row.Up, "BOTTOM", 0, 0)
 
@@ -1815,15 +1841,16 @@ local function CreateManagerRow(f, slot)
 
 	-- Al final: renombrar y quitar
 	row.Remove = IconButton(row, "Interface\\Buttons\\UI-GroupLoot-Pass-Up", L.MENU_REMOVE, function()
-		local i = IndexOf(row.stop)
-		if i then RemoveStop(i) end
+		local route = f:Route()
+		local i = IndexOf(row.stop, route)
+		if i then RemoveStop(i, route) end
 	end)
 	row.Remove:SetPoint("RIGHT", -2, 0)
 	row.Rename = IconButton(row, "Interface\\Buttons\\UI-GuildButton-PublicNote-Up", L.MENU_RENAME, function()
-		local stop = row.stop
+		local stop, route = row.stop, f:Route()
 		AskName(stop.name, function(newName, newDesc)
-			local i = IndexOf(stop)
-			if i then RenameStop(i, newName, newDesc, true) end
+			local i = IndexOf(stop, route)
+			if i then RenameStop(i, newName, newDesc, true, route) end
 		end, stop.desc)
 	end)
 	row.Rename:SetPoint("RIGHT", row.Remove, "LEFT", -4, 0)
@@ -1865,15 +1892,53 @@ local function CreateManagerRow(f, slot)
 		f.dropIndex = nil
 		if from and target then
 			local to = target > from and target - 1 or target
-			if to ~= from then MoveStopTo(from, to) end
+			if to ~= from then MoveStopTo(from, to, f:Route()) end
 		end
+	end)
+	return row
+end
+
+-- Fila de la lista de rutas (columna izquierda): punto verde si es la activa,
+-- nombre y número de waypoints. Clic: elegirla.
+local ROUTE_ROW_HEIGHT = 22
+local function CreateRouteRow(f, slot)
+	local row = CreateFrame("Button", nil, f.RouteContent)
+	row:SetHeight(ROUTE_ROW_HEIGHT)
+	row:SetPoint("TOPLEFT", f.RouteContent, "TOPLEFT", 0, -(slot - 1) * ROUTE_ROW_HEIGHT)
+	row:SetPoint("RIGHT", f.RouteContent, "RIGHT", 0, 0)
+	row:RegisterForClicks("LeftButtonUp")
+
+	row.Selected = row:CreateTexture(nil, "BACKGROUND")
+	row.Selected:SetAllPoints()
+	row.Selected:SetColorTexture(0.25, 0.45, 0.85, 0.35)
+	local hl = row:CreateTexture(nil, "HIGHLIGHT")
+	hl:SetAllPoints()
+	hl:SetColorTexture(1, 1, 1, 0.08)
+
+	row.Dot = row:CreateTexture(nil, "ARTWORK")
+	row.Dot:SetTexture("Interface\\COMMON\\Indicator-Green")
+	row.Dot:SetSize(12, 12)
+	row.Dot:SetPoint("LEFT", 4, 0)
+
+	row.Count = row:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+	row.Count:SetPoint("RIGHT", -4, 0)
+
+	row.Name = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+	row.Name:SetPoint("LEFT", 20, 0)
+	row.Name:SetPoint("RIGHT", row.Count, "LEFT", -4, 0)
+	row.Name:SetJustifyH("LEFT")
+	row.Name:SetWordWrap(false)
+
+	row:SetScript("OnClick", function(self)
+		f.selectedRouteId = self.route and self.route.id
+		f:Refresh()
 	end)
 	return row
 end
 
 local function CreateManager()
 	local f = CreateFrame("Frame", "BridgeManagerFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
-	f:SetSize(500, 420)
+	f:SetSize(720, 440)
 	f:SetPoint("CENTER")
 	f:SetFrameStrata("FULLSCREEN_DIALOG")
 	f:SetToplevel(true)
@@ -1904,28 +1969,67 @@ local function CreateManager()
 	local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
 	close:SetPoint("TOPRIGHT", -6, -6)
 
-	-- Filtro
+	-- La ruta elegida en la ventana (si ya no existe, la activa)
+	function f:Route()
+		for _, route in ipairs(DB.routes) do
+			if route.id == self.selectedRouteId then return route end
+		end
+		local route = ActiveRoute()
+		self.selectedRouteId = route.id
+		return route
+	end
+
+	-- Columna izquierda: las rutas
+	local routesTitle = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+	routesTitle:SetPoint("TOPLEFT", 24, -80)
+	routesTitle:SetText(L.MANAGER_ROUTES)
+	local rsf = CreateFrame("ScrollFrame", "BridgeManagerRouteScroll", f, "UIPanelScrollFrameTemplate")
+	rsf:SetPoint("TOPLEFT", 18, -98)
+	rsf:SetPoint("BOTTOMLEFT", 18, 42)
+	rsf:SetWidth(172)
+	local rcontent = CreateFrame("Frame", nil, rsf)
+	rcontent:SetSize(172, 1)
+	rsf:SetScrollChild(rcontent)
+	f.RouteContent = rcontent
+	f.RouteScrollBar = rsf.ScrollBar or _G["BridgeManagerRouteScrollScrollBar"]
+	f.routeRows = {}
+
+	local sep = f:CreateTexture(nil, "ARTWORK")
+	sep:SetColorTexture(1, 1, 1, 0.08)
+	sep:SetWidth(1)
+	sep:SetPoint("TOPLEFT", 218, -76)
+	sep:SetPoint("BOTTOMLEFT", 218, 42)
+
+	-- Columna derecha: los waypoints de la ruta elegida
+	f.RouteName = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+	f.RouteName:SetPoint("TOPLEFT", 230, -79)
+	f.RouteName:SetPoint("RIGHT", -184, 0)
+	f.RouteName:SetJustifyH("LEFT")
+	f.RouteName:SetWordWrap(false)
+
+	-- Buscador, arriba y sobre las dos columnas (por ahora filtra los waypoints de la
+	-- ruta elegida; buscará también en las rutas)
 	local ok, search = pcall(CreateFrame, "EditBox", "BridgeManagerSearch", f, "SearchBoxTemplate")
 	if not ok or not search then search = CreateFrame("EditBox", "BridgeManagerSearch", f, "InputBoxTemplate") end
-	search:SetSize(260, 20)
-	search:SetPoint("TOPLEFT", 26, -44)
+	search:SetSize(360, 20)
+	search:SetPoint("TOPLEFT", 28, -44)
 	search:SetAutoFocus(false)
 	search:HookScript("OnTextChanged", function() f:Refresh() end)
 	search:HookScript("OnEscapePressed", function(self) self:ClearFocus() end)
 	f.Search = search
 
 	local import = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-	import:SetSize(140, 22)
-	import:SetPoint("TOPRIGHT", -24, -43)
+	import:SetSize(150, 22)
+	import:SetPoint("TOPRIGHT", -24, -73)
 	import:SetText(L.IMPORT_OPEN)
-	import:SetScript("OnClick", function() ShowImport() end)
+	import:SetScript("OnClick", function() ShowImport(f:Route()) end)
 
-	-- Lista
+	-- Lista de waypoints
 	local sf = CreateFrame("ScrollFrame", "BridgeManagerScroll", f, "UIPanelScrollFrameTemplate")
-	sf:SetPoint("TOPLEFT", 18, -74)
+	sf:SetPoint("TOPLEFT", 226, -102)
 	sf:SetPoint("BOTTOMRIGHT", -38, 42)
 	local content = CreateFrame("Frame", nil, sf)
-	content:SetSize(444, 1)
+	content:SetSize(456, 1)
 	sf:SetScrollChild(content)
 	f.Content = content
 	f.ScrollBar = sf.ScrollBar or _G["BridgeManagerScrollScrollBar"]
@@ -1949,18 +2053,47 @@ local function CreateManager()
 		local _, cy = GetCursorPosition()
 		cy = cy / content:GetEffectiveScale()
 		local slot = math.floor((content:GetTop() - cy) / ROW_HEIGHT + 0.5)
-		slot = math.max(0, math.min(slot, #Stops()))
+		slot = math.max(0, math.min(slot, #StopsOf(f:Route())))
 		f.dropIndex = slot + 1
 		f.DropLine:ClearAllPoints()
 		f.DropLine:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -slot * ROW_HEIGHT + 1)
 		f.DropLine:SetPoint("RIGHT", content, "RIGHT", 0, 0)
 	end
 
+	-- La barra de desplazamiento solo cuando la lista no cabe
+	local function FitScroll(bar, scroll, height)
+		if not bar then return end
+		local needed = height > (scroll:GetHeight() or 0)
+		bar:SetShown(needed)
+		if not needed then scroll:SetVerticalScroll(0) end
+	end
+
+	function f:RefreshRoutes()
+		local selected, activeId = self:Route(), ActiveRoute().id
+		for i, route in ipairs(DB.routes) do
+			local row = self.routeRows[i] or CreateRouteRow(self, i)
+			self.routeRows[i] = row
+			row.route = route
+			row.Name:SetText(route.name or "?")
+			row.Count:SetText(string.format("(%d)", #route.stops))
+			row.Dot:SetShown(route.id == activeId)
+			row.Selected:SetShown(route == selected)
+			row:Show()
+		end
+		for k = #DB.routes + 1, #self.routeRows do self.routeRows[k]:Hide() end
+		rcontent:SetHeight(math.max(1, #DB.routes * ROUTE_ROW_HEIGHT))
+		FitScroll(self.RouteScrollBar, rsf, #DB.routes * ROUTE_ROW_HEIGHT)
+	end
+
 	function f:Refresh()
+		self:RefreshRoutes()
+		local route = self:Route()
+		local stops = StopsOf(route)
+		self.RouteName:SetText(route.name or "?")
 		local filter = (self.Search:GetText() or ""):lower():match("^%s*(.-)%s*$")
 		self.filtering = filter ~= ""
 		local shown = 0
-		for i, st in ipairs(Stops()) do
+		for i, st in ipairs(stops) do
 			local name, zone = (st.name or ""):lower(), (st.zone or ""):lower()
 			if not self.filtering or name:find(filter, 1, true) or zone:find(filter, 1, true) then
 				shown = shown + 1
@@ -1971,20 +2104,15 @@ local function CreateManager()
 				row.Name:SetText(st.name or "?")
 				row.Zone:SetText(string.format("%s (%.1f, %.1f)", st.zone or "?", (st.x or 0) * 100, (st.y or 0) * 100))
 				SetButtonEnabled(row.Up, not self.filtering and i > 1)
-				SetButtonEnabled(row.Down, not self.filtering and i < #Stops())
+				SetButtonEnabled(row.Down, not self.filtering and i < #stops)
 				row:Show()
 			end
 		end
 		for k = shown + 1, #self.rows do self.rows[k]:Hide() end
 		content:SetHeight(math.max(1, shown * ROW_HEIGHT))
-		-- La barra de desplazamiento solo cuando la lista no cabe
-		if self.ScrollBar then
-			local needed = shown * ROW_HEIGHT > (self.Content:GetParent():GetHeight() or 0)
-			self.ScrollBar:SetShown(needed)
-			if not needed then self.Content:GetParent():SetVerticalScroll(0) end
-		end
+		FitScroll(self.ScrollBar, sf, shown * ROW_HEIGHT)
 		if shown == 0 then
-			self.Empty:SetText(#Stops() == 0 and L.MANAGER_EMPTY or L.MANAGER_NO_MATCH)
+			self.Empty:SetText(#stops == 0 and L.MANAGER_EMPTY or L.MANAGER_NO_MATCH)
 			self.Empty:Show()
 		else
 			self.Empty:Hide()

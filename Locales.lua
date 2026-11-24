@@ -41,21 +41,22 @@ local L = {
 	MENU_CLEAR_ZONE = "In this zone",
 	MENU_CLEAR_ALL = "All",
 	MENU_ASK_NAME = "Ask for a name when adding",
-	MENU_MANAGE = "Manage stops…",
-	MANAGER_TITLE = "Manage stops",
+	MENU_MANAGE = "Manage routes…",
+	MANAGER_TITLE = "Manage routes",
+	MANAGER_ROUTES = "Routes",
 	MANAGER_HINT = "Click: show on the map · Drag: reorder",
 
 	-- Importar una lista de /way
 	IMPORT_OPEN = "Import /way list",
-	IMPORT_TITLE = "Import /way list",
+	IMPORT_TITLE_ROUTE = "Import /way list into “%s”",
 	IMPORT_HINT = "Paste /way lines here, one per line. Each one becomes a stop, in order.",
-	IMPORT_CLEAR_FIRST = "Clear current stops before importing",
+	IMPORT_CLEAR_FIRST = "Clear this route's stops before importing",
 	IMPORT_BUTTON = "Import",
 	IMPORT_ADDED = "Import: %d stops added",
 	IMPORT_REPEATED = "%d repeated",
 	IMPORT_BAD = "%d lines not understood",
 	MANAGER_FILTERING = "Clear the search to reorder.",
-	MANAGER_EMPTY = "No stops yet. Alt+click on the map to add one.",
+	MANAGER_EMPTY = "This route has no stops yet. Alt+click on the map to add one.",
 	MANAGER_NO_MATCH = "No stops match the search.",
 	TIP_UP = "Move up",
 	TIP_DOWN = "Move down",
@@ -137,7 +138,7 @@ local L = {
 
 	-- Ayuda (/bridge)
 	HELP_HEADER = "Version %s. Commands:",
-	HELP_MANAGE = "open the Manage stops window",
+	HELP_MANAGE = "open the Manage routes window",
 	HELP_IMPORT = "paste a list of /way lines to add them as stops",
 	HELP_CLEAR = "clear all stops (and the AzerothGPS route, if installed)",
 	HELP_MARKERS = "show/hide the map markers",
@@ -188,20 +189,21 @@ if locale == "esES" or locale == "esMX" then
 	L.MENU_CLEAR_ZONE = "De la zona"
 	L.MENU_CLEAR_ALL = "Todas"
 	L.MENU_ASK_NAME = "Pedir nombre al añadir"
-	L.MENU_MANAGE = "Gestionar paradas…"
-	L.MANAGER_TITLE = "Gestionar paradas"
+	L.MENU_MANAGE = "Gestionar rutas…"
+	L.MANAGER_TITLE = "Gestionar rutas"
+	L.MANAGER_ROUTES = "Rutas"
 	L.MANAGER_HINT = "Clic: ver en el mapa · Arrastrar: reordenar"
 
 	L.IMPORT_OPEN = "Importar lista /way"
-	L.IMPORT_TITLE = "Importar lista de /way"
+	L.IMPORT_TITLE_ROUTE = "Importar lista de /way en «%s»"
 	L.IMPORT_HINT = "Pega aquí las líneas /way, una por línea. Cada una será una parada, en orden."
-	L.IMPORT_CLEAR_FIRST = "Borrar las paradas actuales antes de importar"
+	L.IMPORT_CLEAR_FIRST = "Borrar las paradas de esta ruta antes de importar"
 	L.IMPORT_BUTTON = "Importar"
 	L.IMPORT_ADDED = "Importar: %d paradas añadidas"
 	L.IMPORT_REPEATED = "%d repetidas"
 	L.IMPORT_BAD = "%d líneas no entendidas"
 	L.MANAGER_FILTERING = "Borra la búsqueda para reordenar."
-	L.MANAGER_EMPTY = "Aún no hay paradas. Alt+clic en el mapa para añadir una."
+	L.MANAGER_EMPTY = "Esta ruta aún no tiene paradas. Alt+clic en el mapa para añadir una."
 	L.MANAGER_NO_MATCH = "Ninguna parada coincide con la búsqueda."
 	L.TIP_UP = "Subir"
 	L.TIP_DOWN = "Bajar"
@@ -279,7 +281,7 @@ if locale == "esES" or locale == "esMX" then
 	L.DIAG_COMPASS = "Brújula: activada %s, visible %s, distancia a la parada 1: %s"
 
 	L.HELP_HEADER = "Versión %s. Comandos:"
-	L.HELP_MANAGE = "abrir la ventana Gestionar paradas"
+	L.HELP_MANAGE = "abrir la ventana Gestionar rutas"
 	L.HELP_IMPORT = "pegar una lista de líneas /way para añadirlas como paradas"
 	L.HELP_CLEAR = "borrar todas las paradas (y la ruta de AzerothGPS, si lo tienes)"
 	L.HELP_MARKERS = "mostrar/ocultar los marcadores del mapa"

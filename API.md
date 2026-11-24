@@ -69,7 +69,7 @@ Las paradas añadidas por la API **nunca** muestran la cajita para poner nombre.
 
 ### Eventos
 
-`fn(evento, parada)` se llama tras cada cambio, venga de donde venga (el mapa, la ventana Gestionar paradas, Questie, un `/way`, la llegada a una parada en AzerothGPS u otro addon). `parada` es una copia.
+`fn(evento, parada)` se llama tras cada cambio, venga de donde venga (el mapa, la ventana Gestionar rutas, Questie, un `/way`, la llegada a una parada en AzerothGPS u otro addon). `parada` es una copia.
 
 | Evento | Cuándo | `parada` |
 |---|---|---|
@@ -173,7 +173,7 @@ Stops added through the API **never** show the naming box.
 
 ### Events
 
-`fn(event, stop)` is called after every change, wherever it comes from (the map, the Manage stops window, Questie, a `/way`, arriving at a stop in AzerothGPS, or another addon). `stop` is a copy.
+`fn(event, stop)` is called after every change, wherever it comes from (the map, the Manage routes window, Questie, a `/way`, arriving at a stop in AzerothGPS, or another addon). `stop` is a copy.
 
 | Event | When | `stop` |
 |---|---|---|
