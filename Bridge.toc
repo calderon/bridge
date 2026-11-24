@@ -5,7 +5,9 @@
 ## Notes-esMX: Paradas en el mapa del mundo (Leatrix Maps, Questie). Con AzerothGPS, se convierten en una ruta por carreteras.
 ## Author: Daniel Calderón
 ## IconTexture: Interface\AddOns\Bridge\Media\icon
+# x-release-please-start-version
 ## Version: 1.0.0
+# x-release-please-end
 ## Category: Map
 ## OptionalDeps: AzerothGPS, Leatrix_Maps, Questie, TomTom
 ## SavedVariablesPerCharacter: BridgeAddonDB

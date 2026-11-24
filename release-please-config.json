@@ -1,0 +1,21 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "release-type": "simple",
+  "bootstrap-sha": "2299fde4b33badc5e1a469ba91a5439e1c81531f",
+  "packages": {
+    ".": {
+      "package-name": "Bridge",
+      "include-component-in-tag": false,
+      "changelog-path": "CHANGELOG.md",
+      "changelog-sections": [
+        { "type": "feat", "section": "Features" },
+        { "type": "fix", "section": "Bug Fixes" },
+        { "type": "chore", "section": "Miscellaneous", "hidden": true }
+      ],
+      "extra-files": [
+        { "type": "generic", "path": "Core.lua" },
+        { "type": "generic", "path": "Bridge.toc" }
+      ]
+    }
+  }
+}
