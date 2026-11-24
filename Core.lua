@@ -70,6 +70,16 @@ local function EnsureQuickRoute()
 	return quick
 end
 
+-- Tu cadáver (si lo hay): se guarda en la ruta Rápida (es de cada personaje), pero la
+-- brújula y AzerothGPS lo ponen siempre primero, sea cual sea la ruta activa.
+local function CorpseStop()
+	local quick = QuickRoute()
+	if not quick then return end
+	for _, st in ipairs(quick.stops) do
+		if st.corpse then return st end
+	end
+end
+
 local function ActiveRoute()
 	for _, route in ipairs(DB.routes) do
 		if route.id == DB.activeRoute then return route end
@@ -625,6 +635,9 @@ local function RebuildRoute()
 	C_Timer.After(0.2, function()
 		rebuildPending = false
 		SendToGPS("/agps clear")
+		-- Tu cadáver primero (si la activa es la Rápida, ya va en su lista)
+		local corpse = CorpseStop()
+		if corpse and corpse.line and not ActiveRoute().quick then SendToGPS(corpse.line) end
 		for _, other in ipairs(Stops()) do
 			-- Las ya alcanzadas no: AzerothGPS solo lleva lo que queda del recorrido
 			if other.line and not other.reached then SendToGPS(other.line) end
@@ -728,17 +741,6 @@ end
 -- AzerothGPS, y su recorrido empieza desde la primera parada.
 local function ActivateRoute(route)
 	if not route then return end
-	local previous = ActiveRoute()
-	-- Tu cadáver no es de ninguna ruta: se va con la ruta activa, y sigue el primero
-	if previous ~= route then
-		for i = #previous.stops, 1, -1 do
-			local st = previous.stops[i]
-			if st.corpse then
-				table.remove(previous.stops, i)
-				table.insert(route.stops, 1, st)
-			end
-		end
-	end
 	DB.activeRoute = route.id
 	for _, st in ipairs(route.stops) do st.reached = nil end
 	RebuildRoute() -- AzerothGPS: borra su ruta y recibe esta
@@ -2995,11 +2997,14 @@ local function UpdateCompass(self, elapsed)
 	if self.wait > 0 then return end
 	self.wait = 0.05
 	local index, stop = NextStopIndex()
+	-- Tu cadáver va primero, sea cual sea la ruta activa
+	local corpse = CorpseStop()
+	if corpse then index, stop = nil, corpse end
 	if not stop then self:Hide() return end
 	local eta = UpdateETA(self, stop, DistanceTo(stop))
 	self.ETA:SetText(eta and L.ETA:format(FormatETA(eta)) or "")
 	local count = #Stops()
-	self.Name:SetText(count > 1 and string.format("%s |cff999999(%d/%d)|r", stop.name or "?", index, count) or (stop.name or "?"))
+	self.Name:SetText((index and count > 1) and string.format("%s |cff999999(%d/%d)|r", stop.name or "?", index, count) or (stop.name or "?"))
 	local d = DistanceTo(stop)
 	local bearing = BearingTo(stop)
 	local facing = GetPlayerFacing and GetPlayerFacing()
@@ -3077,7 +3082,7 @@ end
 -- Se muestra cuando está activada y quedan paradas por alcanzar
 function UpdateCompassShown()
 	if not DB then return end
-	if DB.showCompass and NextStopIndex() then
+	if DB.showCompass and (CorpseStop() or NextStopIndex()) then
 		CreateCompass().wait = 0
 		compass:Show()
 	elseif compass then
@@ -3202,7 +3207,8 @@ end
 
 
 ---------------------------------------------------------------------------
--- Tu cadáver: al liberar el espíritu se pone delante de la ruta, y se quita al resucitar
+-- Tu cadáver: al liberar el espíritu se pone en la ruta Rápida (y delante de la ruta
+-- activa para la brújula y AzerothGPS), y se quita al resucitar
 ---------------------------------------------------------------------------
 
 local deathSpot -- dónde moriste: { mapID, x, y }
@@ -3233,15 +3239,18 @@ local function CorpseSpot()
 	end
 end
 
+-- Quita tu cadáver de donde esté (en la Rápida; en datos antiguos, de cualquier ruta)
 local function RemoveCorpseStop()
 	local removed = false
-	for i = #Stops(), 1, -1 do
-		local st = Stops()[i]
-		if st.corpse then
-			local public = PublicStop(st)
-			table.remove(Stops(), i)
-			Fire("STOP_REMOVED", public)
-			removed = true
+	for _, route in ipairs(DB.routes) do
+		for i = #route.stops, 1, -1 do
+			local st = route.stops[i]
+			if st.corpse then
+				local public = PublicStop(st)
+				table.remove(route.stops, i)
+				Fire("STOP_REMOVED", public)
+				removed = true
+			end
 		end
 	end
 	if removed then
@@ -3264,8 +3273,9 @@ local function AddCorpseStop()
 		cont = cont, wx = wx, wy = wy, corpse = true, source = "Bridge",
 		line = string.format("/way %s %.1f %.1f %s", zoneName, zx * 100, zy * 100, L.CORPSE),
 	}
-	-- Delante de todo: primero recuperas el cuerpo, luego sigue la ruta que tenías
-	table.insert(Stops(), 1, stop)
+	-- En la ruta Rápida, el primero. La brújula y AzerothGPS lo ponen delante de la ruta
+	-- activa: primero recuperas el cuerpo, luego sigue la ruta que tenías.
+	table.insert(EnsureQuickRoute().stops, 1, stop)
 	RebuildRoute()
 	RefreshPins()
 	Print(L.CORPSE_ADDED)
@@ -3288,8 +3298,10 @@ end
 
 local function StartCorpseWatch()
 	-- No se guarda entre sesiones: si entras siendo fantasma, se vuelve a poner
-	for i = #Stops(), 1, -1 do
-		if Stops()[i].corpse then table.remove(Stops(), i) end
+	for _, route in ipairs(DB.routes) do
+		for i = #route.stops, 1, -1 do
+			if route.stops[i].corpse then table.remove(route.stops, i) end
+		end
 	end
 	if UnitIsGhost("player") then C_Timer.After(2, AddCorpseStop) end
 	local ev = CreateFrame("Frame")
