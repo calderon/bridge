@@ -186,6 +186,17 @@ local L = {
 	HELP_HEADER = "Version %s. Commands:",
 	HELP_MANAGE = "open the Manage routes window",
 	HELP_IMPORT = "import stops by pasting a list of /way lines",
+	HELP_NAME = "<name>",
+	HELP_ROUTE_LIST = "list your routes",
+	HELP_ROUTE_LOAD = "load a saved route into the Current route",
+	HELP_ROUTE_NEW = "create an empty route",
+	HELP_ROUTE_RESTART = "restart the Current route",
+	ROUTE_LIST_HEADER = "Your routes:",
+	ROUTE_TAG_SHARED = "shared",
+	ROUTE_TAG_LOADED = "loaded",
+	ROUTE_USAGE = "Usage: /bridge route list | load <name> | new <name> | restart",
+	ROUTE_NOT_FOUND = "No saved route called “%s”. Type /bridge route list to see them.",
+	ROUTE_AMBIGUOUS = "Several routes match “%s”: write more of the name.",
 	HELP_CLEAR = "empty the Current route (and the AzerothGPS route, if installed); your corpse stays",
 	HELP_MARKERS = "show/hide the map markers",
 	HELP_SIZE = "marker size, 30 to 200 (%)",
@@ -200,6 +211,7 @@ local L = {
 local W = {
 	clear = "clear", markers = "markers", size = "size", button = "button", reset = "reset",
 	version = "version", copy = "copy", manage = "manage", import = "import",
+	route = "route", list = "list", load = "load", new = "new", restart = "restart",
 }
 
 local locale = GetLocale()
@@ -375,6 +387,17 @@ if locale == "esES" or locale == "esMX" then
 	L.HELP_HEADER = "Versión %s. Comandos:"
 	L.HELP_MANAGE = "abrir la ventana Gestionar rutas"
 	L.HELP_IMPORT = "importar paradas pegando una lista de líneas /way"
+	L.HELP_NAME = "<nombre>"
+	L.HELP_ROUTE_LIST = "ver tus rutas"
+	L.HELP_ROUTE_LOAD = "cargar una ruta guardada en la Ruta actual"
+	L.HELP_ROUTE_NEW = "crear una ruta vacía"
+	L.HELP_ROUTE_RESTART = "reiniciar la Ruta actual"
+	L.ROUTE_LIST_HEADER = "Tus rutas:"
+	L.ROUTE_TAG_SHARED = "compartida"
+	L.ROUTE_TAG_LOADED = "cargada"
+	L.ROUTE_USAGE = "Uso: /bridge route list | load <nombre> | new <nombre> | restart"
+	L.ROUTE_NOT_FOUND = "No hay ninguna ruta guardada llamada «%s». Escribe /bridge route list para verlas."
+	L.ROUTE_AMBIGUOUS = "Varias rutas coinciden con «%s»: escribe más del nombre."
 	L.HELP_CLEAR = "vaciar la Ruta actual (y la ruta de AzerothGPS, si lo tienes); tu cadáver se queda"
 	L.HELP_MARKERS = "mostrar/ocultar los marcadores del mapa"
 	L.HELP_SIZE = "tamaño de los marcadores, de 30 a 200 (%)"
