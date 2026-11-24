@@ -50,14 +50,24 @@ local DATA_VERSION = 3 -- versión de los datos guardados, para migrar en el fut
 -- privadas. La Ruta actual nunca se comparte.
 local SharedDB
 
--- Todas las rutas que ve este personaje: la actual, sus rutas privadas y las compartidas
+-- Todas las rutas que ve este personaje: la actual primero y después las guardadas
+-- (privadas y compartidas juntas) por orden alfabético, para que una ruta no cambie de
+-- sitio al compartirla o dejar de compartirla
 local function AllRoutes()
-	local list = {}
-	for _, route in ipairs(DB.routes) do table.insert(list, route) end
-	if SharedDB then
-		for _, route in ipairs(SharedDB.routes) do table.insert(list, route) end
+	local current, saved = nil, {}
+	for _, route in ipairs(DB.routes) do
+		if route.quick then current = route else table.insert(saved, route) end
 	end
-	return list
+	if SharedDB then
+		for _, route in ipairs(SharedDB.routes) do table.insert(saved, route) end
+	end
+	table.sort(saved, function(a, b)
+		local na, nb = (a.name or ""):lower(), (b.name or ""):lower()
+		if na ~= nb then return na < nb end
+		return tostring(a.id) < tostring(b.id)
+	end)
+	if current then table.insert(saved, 1, current) end
+	return saved
 end
 
 -- Compartir una ruta guardada con todos tus personajes, o dejar de compartirla (vuelve a
@@ -652,8 +662,13 @@ local function Confirm(text, yesText, onYes, anchor)
 	end
 	local f = confirmBox
 	f.onYes = onYes
-	f.Text:SetText(text)
+	-- El botón se ensancha según su texto (y la caja, si hace falta)
 	f.Yes:SetText(yesText)
+	local fs = f.Yes:GetFontString()
+	local yesWidth = math.max(100, math.ceil(fs and fs:GetStringWidth() or 0) + 28)
+	f.Yes:SetWidth(yesWidth)
+	f:SetWidth(math.max(280, yesWidth + 100 + 6 + 20))
+	f.Text:SetText(text)
 	f:SetHeight(math.ceil(f.Text:GetStringHeight()) + 52)
 	f:ClearAllPoints()
 	f:SetPoint("BOTTOMLEFT", anchor, "TOPLEFT", -4, 4)
@@ -2542,6 +2557,7 @@ local function CreateManager()
 		local text = n == 0 and L.ROUTE_DELETE_CONFIRM_EMPTY:format(route.name)
 			or n == 1 and L.ROUTE_DELETE_CONFIRM_ONE:format(route.name)
 			or L.ROUTE_DELETE_CONFIRM:format(route.name, n)
+		if route.shared then text = text .. "\n" .. L.ROUTE_DELETE_SHARED end
 		Confirm(text, L.ROUTE_DELETE_YES, function()
 			if DeleteRoute(route) then
 				f.selectedRouteId = nil
@@ -2576,7 +2592,39 @@ local function CreateManager()
 	-- Lista de waypoints
 	local sf = CreateFrame("ScrollFrame", "BridgeManagerScroll", f, "UIPanelScrollFrameTemplate")
 	sf:SetPoint("TOPLEFT", 226, -102)
-	sf:SetPoint("BOTTOMRIGHT", -38, 42)
+	sf:SetPoint("BOTTOMRIGHT", -38, 74)
+
+	-- Abajo a la derecha: compartir la ruta guardada con todos tus personajes
+	f.Shared = CreateFrame("CheckButton", nil, f, "UICheckButtonTemplate")
+	f.Shared:SetSize(24, 24)
+	f.Shared:SetPoint("BOTTOMLEFT", 228, 44)
+	local sharedText = f.Shared.Text or f.Shared.text or f.Shared:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+	sharedText:ClearAllPoints()
+	sharedText:SetPoint("LEFT", f.Shared, "RIGHT", 2, 0)
+	sharedText:SetText(L.ROUTE_SHARED)
+	f.Shared:SetScript("OnEnter", function(self)
+		GameTooltip:SetOwner(self, "ANCHOR_TOPLEFT")
+		GameTooltip:SetText(L.ROUTE_SHARED_TIP, 1, 1, 1, 1, true)
+		GameTooltip:Show()
+	end)
+	f.Shared:SetScript("OnLeave", GameTooltip_Hide)
+	f.Shared:SetScript("OnClick", function(self)
+		local route = f:Route()
+		local function Apply(shared)
+			if SetRouteShared(route, shared) then
+				f.selectedRouteId = route.id -- cambia de id al cambiar de sitio
+				Print((shared and L.ROUTE_SHARED_ON or L.ROUTE_SHARED_OFF):format(route.name or "?"))
+			end
+			f:Refresh()
+		end
+		if self:GetChecked() then
+			Apply(true)
+		else
+			-- Dejar de compartir: tus otros personajes dejarán de verla. Se pregunta antes.
+			self:SetChecked(true)
+			Confirm(L.ROUTE_UNSHARE_CONFIRM:format(route.name or "?"), L.ROUTE_UNSHARE_YES, function() Apply(false) end, self)
+		end
+	end)
 	local content = CreateFrame("Frame", nil, sf)
 	content:SetSize(456, 1)
 	sf:SetScrollChild(content)
@@ -2654,7 +2702,13 @@ local function CreateManager()
 			row:SetPoint("RIGHT", rcontent, "RIGHT", 0, 0)
 			row.route = res.route
 			row.Name:SetText(res.route.name or "?")
-			if res.nameMatch then row.Name:SetTextColor(1, 0.82, 0) else row.Name:SetTextColor(1, 1, 1) end
+			if res.nameMatch then
+				row.Name:SetTextColor(1, 0.82, 0)
+			elseif res.route.shared then
+				row.Name:SetTextColor(0.55, 0.8, 1) -- compartida con tus personajes
+			else
+				row.Name:SetTextColor(1, 1, 1)
+			end
 			row.Match:SetShown(res.nameMatch)
 			-- (5) normalmente; al buscar, (2/5): 2 de sus 5 paradas coinciden (el 2 en amarillo)
 			if res.stopMatches > 0 then
@@ -2728,6 +2782,8 @@ local function CreateManager()
 			end
 		end
 		self.Import:SetShown(not nothing)
+		self.Shared:SetShown(not nothing and not current)
+		self.Shared:SetChecked(route.shared == true)
 		-- Todas las paradas de la ruta, en su orden; las que coinciden, resaltadas
 		local shown = 0
 		for i, st in ipairs(stops) do
