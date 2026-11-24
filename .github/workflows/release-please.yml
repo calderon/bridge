@@ -1,0 +1,21 @@
+name: Release
+
+# On every push to main, release-please keeps a "release" pull request up to date
+# (new version in Core.lua and Bridge.toc, CHANGELOG.md). Merging that pull request
+# creates the tag vX.Y.Z and the GitHub release.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json

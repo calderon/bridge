@@ -20,8 +20,9 @@ local ADDON, ns = ...
 local L, W = ns.L, ns.W -- textos en el idioma del juego y palabras de los comandos (Locales.lua)
 local PIN_TEMPLATE = "BridgePinTemplate"
 
--- La versión va aquí (y no solo en el .toc) porque el juego no relee el .toc con /reload
-local VERSION = "1.0.0"
+-- La versión va aquí (y no solo en el .toc) porque el juego no relee el .toc con /reload.
+-- No cambiarla a mano: release-please la actualiza aquí y en Bridge.toc en cada versión.
+local VERSION = "1.0.0" -- x-release-please-version
 local PIN_TEXTURE = "Interface\\AddOns\\Bridge\\Media\\pin"
 local PIN_TEXTURE_HOVER = "Interface\\AddOns\\Bridge\\Media\\pin_hover"
 
