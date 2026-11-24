@@ -1,0 +1,16 @@
+## Interface: 16001
+## Title: Bridge
+## Notes: Waypoints on the world map (Leatrix Maps, Questie). With AzerothGPS, they become a road route.
+## Notes-esES: Paradas en el mapa del mundo (Leatrix Maps, Questie). Con AzerothGPS, se convierten en una ruta por carreteras.
+## Notes-esMX: Paradas en el mapa del mundo (Leatrix Maps, Questie). Con AzerothGPS, se convierten en una ruta por carreteras.
+## Author: Daniel Calderón
+## IconTexture: Interface\AddOns\Bridge\Media\icon
+## Version: 1.0.0
+## Category: Map
+## OptionalDeps: AzerothGPS, Leatrix_Maps, Questie, TomTom
+## SavedVariablesPerCharacter: BridgeAddonDB
+
+Locales.lua
+Core.lua
+TomTomCompat.lua
+Pins.xml

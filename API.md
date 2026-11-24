@@ -1,0 +1,200 @@
+# BridgeAPI
+
+> *[English version below](#english)*
+
+## Español
+
+Bridge ofrece una API para que otros addons (o tus macros con `/run`) puedan crear y gestionar paradas. Está en la tabla global **`BridgeAPI`**.
+
+### Antes de usarla
+
+```lua
+if BridgeAPI and BridgeAPI.version >= 1 then
+    -- Bridge está cargado
+end
+```
+
+Si tu addon la usa, añade `## OptionalDeps: Bridge` a su `.toc` para que Bridge se cargue antes.
+
+### Conceptos
+
+- **Coordenadas:** `mapID` es el uiMapID de Blizzard, y `x`, `y` van de 0 a 1, como en `C_Map`. Si das un mapa de continente, Bridge busca la zona que hay debajo.
+- **`id`:** cada parada tiene un identificador numérico que **no cambia** aunque la parada se reordene, se renombre o se mueva.
+- **Copias:** las funciones que devuelven paradas dan **copias**; cambiarlas no afecta a Bridge.
+- **AzerothGPS:** si está cargado, cada cambio actualiza su ruta. Si no, las paradas solo se ven en el mapa.
+
+Una parada devuelta por la API tiene estos campos:
+
+| Campo | Qué es |
+|---|---|
+| `id` | Identificador fijo |
+| `index` | Posición en la ruta (1 = la primera) |
+| `name` | Nombre |
+| `zone` | Nombre de la zona |
+| `mapID`, `x`, `y` | Zona y coordenadas (0–1) |
+| `source` | Quién la añadió, si se indicó (`"Questie"`, `"/way"`, el nombre de tu addon…) |
+
+### Funciones
+
+| Función | Devuelve | Qué hace |
+|---|---|---|
+| `BridgeAPI.AddStop(mapID, x, y [, opts])` | `id` o `nil` | Añade una parada al final de la ruta |
+| `BridgeAPI.RouteTo(mapID, x, y [, opts])` | `id` o `nil` | Borra la ruta y deja esta parada como única |
+| `BridgeAPI.RemoveStop(id)` | `true`/`false` | Quita una parada |
+| `BridgeAPI.ClearStops()` | — | Quita todas las paradas |
+| `BridgeAPI.RenameStop(id, nombre)` | `true`/`false` | Cambia el nombre |
+| `BridgeAPI.MoveStop(id, mapID, x, y)` | `true`/`false` | Cambia la posición en el mapa |
+| `BridgeAPI.ReorderStop(id, posición)` | `true`/`false` | Cambia su lugar en la ruta (1 = la primera) |
+| `BridgeAPI.GetStop(id)` | parada o `nil` | Una parada |
+| `BridgeAPI.GetStops()` | lista | Todas, en el orden de la ruta |
+| `BridgeAPI.ShowStop(id)` | `true`/`false` | Abre el mapa del mundo en la parada y la hace parpadear |
+| `BridgeAPI.GetDistance(id)` | yardas o `nil` | Distancia en línea recta desde el jugador. Siempre en yardas, aunque el jugador haya elegido metros. `nil` si no se puede saber (otro continente, mazmorra…) |
+| `BridgeAPI.HasAzerothGPS()` | `true`/`false` | Si las paradas se convierten en ruta |
+| `BridgeAPI.RegisterCallback(dueño, evento, fn)` | `true`/`false` | Escuchar un evento |
+| `BridgeAPI.UnregisterCallback(dueño [, evento])` | — | Dejar de escuchar uno o todos |
+
+**`opts`** (opcional) en `AddStop` y `RouteTo`:
+
+| Campo | Qué hace |
+|---|---|
+| `name` | Nombre de la parada. Si no se indica, el de la zona. |
+| `exclusive` | `true` para borrar la ruta y dejar solo esta (`RouteTo` lo hace siempre) |
+| `source` | Texto que identifica quién la añade (por ejemplo, el nombre de tu addon) |
+| `silent` | `true` para que Bridge no escriba "Parada añadida" en el chat |
+
+Las paradas añadidas por la API **nunca** muestran la cajita para poner nombre.
+
+### Eventos
+
+`fn(evento, parada)` se llama tras cada cambio, venga de donde venga (el mapa, la ventana Gestionar paradas, Questie, un `/way`, la llegada a una parada en AzerothGPS u otro addon). `parada` es una copia.
+
+| Evento | Cuándo | `parada` |
+|---|---|---|
+| `STOP_ADDED` | Se añade una parada | La nueva |
+| `STOP_REMOVED` | Se quita una parada | La quitada (`index` ya no aplica) |
+| `STOP_CHANGED` | Se renombra o se mueve | Con los datos nuevos |
+| `STOPS_REORDERED` | Cambia el orden | — |
+| `STOPS_CLEARED` | Se borran todas | — |
+
+`dueño` identifica a quien escucha (por ejemplo, el nombre de tu addon). Hay una función por dueño y evento: registrar otra la sustituye.
+
+### Ejemplos
+
+```lua
+-- Ir a un punto de Elwynn (mapa 1429)
+local id = BridgeAPI.RouteTo(1429, 0.42, 0.65, { name = "Villadorada", source = "MiAddon" })
+
+-- Añadir otra parada sin escribir en el chat
+BridgeAPI.AddStop(1429, 0.32, 0.50, { name = "Buzón", silent = true })
+
+-- Pasar la primera parada al final
+local stops = BridgeAPI.GetStops()
+if stops[1] then BridgeAPI.ReorderStop(stops[1].id, #stops) end
+
+-- Enterarse de cada parada nueva
+BridgeAPI.RegisterCallback("MiAddon", "STOP_ADDED", function(event, stop)
+    print("Nueva parada:", stop.name, stop.zone)
+end)
+```
+
+Desde el chat: `/run BridgeAPI.RouteTo(1429, 0.42, 0.65, {name = "Villadorada"})`
+
+---
+
+<a name="english"></a>
+## English
+
+Bridge offers an API so that other addons (or your `/run` macros) can create and manage stops. It lives in the global table **`BridgeAPI`**.
+
+### Before using it
+
+```lua
+if BridgeAPI and BridgeAPI.version >= 1 then
+    -- Bridge is loaded
+end
+```
+
+If your addon uses it, add `## OptionalDeps: Bridge` to its `.toc` so Bridge loads first.
+
+### Concepts
+
+- **Coordinates:** `mapID` is Blizzard's uiMapID, and `x`, `y` go from 0 to 1, as in `C_Map`. If you pass a continent map, Bridge finds the zone underneath.
+- **`id`:** every stop has a numeric identifier that **never changes**, even if the stop is reordered, renamed or moved.
+- **Copies:** functions that return stops give **copies**; changing them does not affect Bridge.
+- **AzerothGPS:** if it is loaded, every change updates its route. If not, stops are only shown on the map.
+
+A stop returned by the API has these fields:
+
+| Field | Meaning |
+|---|---|
+| `id` | Fixed identifier |
+| `index` | Position in the route (1 = first) |
+| `name` | Name |
+| `zone` | Zone name |
+| `mapID`, `x`, `y` | Zone and coordinates (0–1) |
+| `source` | Who added it, if given (`"Questie"`, `"/way"`, your addon's name…) |
+
+### Functions
+
+| Function | Returns | What it does |
+|---|---|---|
+| `BridgeAPI.AddStop(mapID, x, y [, opts])` | `id` or `nil` | Adds a stop at the end of the route |
+| `BridgeAPI.RouteTo(mapID, x, y [, opts])` | `id` or `nil` | Clears the route and leaves this as the only stop |
+| `BridgeAPI.RemoveStop(id)` | `true`/`false` | Removes a stop |
+| `BridgeAPI.ClearStops()` | — | Removes all stops |
+| `BridgeAPI.RenameStop(id, name)` | `true`/`false` | Changes the name |
+| `BridgeAPI.MoveStop(id, mapID, x, y)` | `true`/`false` | Changes its position on the map |
+| `BridgeAPI.ReorderStop(id, position)` | `true`/`false` | Changes its place in the route (1 = first) |
+| `BridgeAPI.GetStop(id)` | stop or `nil` | One stop |
+| `BridgeAPI.GetStops()` | list | All of them, in route order |
+| `BridgeAPI.ShowStop(id)` | `true`/`false` | Opens the world map at the stop and flashes it |
+| `BridgeAPI.GetDistance(id)` | yards or `nil` | Straight-line distance from the player. Always in yards, even if the player chose meters. `nil` if it can't be known (another continent, a dungeon…) |
+| `BridgeAPI.HasAzerothGPS()` | `true`/`false` | Whether stops become a route |
+| `BridgeAPI.RegisterCallback(owner, event, fn)` | `true`/`false` | Listen to an event |
+| `BridgeAPI.UnregisterCallback(owner [, event])` | — | Stop listening to one or all events |
+
+**`opts`** (optional) for `AddStop` and `RouteTo`:
+
+| Field | What it does |
+|---|---|
+| `name` | Stop name. If not given, the zone name. |
+| `exclusive` | `true` to clear the route and keep only this one (`RouteTo` always does) |
+| `source` | Text identifying who adds it (for example, your addon's name) |
+| `silent` | `true` so Bridge does not print "Stop added" in chat |
+
+Stops added through the API **never** show the naming box.
+
+### Events
+
+`fn(event, stop)` is called after every change, wherever it comes from (the map, the Manage stops window, Questie, a `/way`, arriving at a stop in AzerothGPS, or another addon). `stop` is a copy.
+
+| Event | When | `stop` |
+|---|---|---|
+| `STOP_ADDED` | A stop is added | The new one |
+| `STOP_REMOVED` | A stop is removed | The removed one (`index` no longer applies) |
+| `STOP_CHANGED` | A stop is renamed or moved | With the new data |
+| `STOPS_REORDERED` | The order changes | — |
+| `STOPS_CLEARED` | All stops are cleared | — |
+
+`owner` identifies the listener (for example, your addon's name). There is one function per owner and event: registering another one replaces it.
+
+### Examples
+
+```lua
+-- Go to a point in Elwynn (map 1429)
+local id = BridgeAPI.RouteTo(1429, 0.42, 0.65, { name = "Goldshire", source = "MyAddon" })
+
+-- Add another stop without printing to chat
+BridgeAPI.AddStop(1429, 0.32, 0.50, { name = "Mailbox", silent = true })
+
+-- Move the first stop to the end
+local stops = BridgeAPI.GetStops()
+if stops[1] then BridgeAPI.ReorderStop(stops[1].id, #stops) end
+
+-- Get notified of every new stop
+BridgeAPI.RegisterCallback("MyAddon", "STOP_ADDED", function(event, stop)
+    print("New stop:", stop.name, stop.zone)
+end)
+```
+
+From chat: `/run BridgeAPI.RouteTo(1429, 0.42, 0.65, {name = "Goldshire"})`

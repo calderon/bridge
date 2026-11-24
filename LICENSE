@@ -1,0 +1,11 @@
+Bridge
+Copyright (c) 2026 Daniel Calderón. All rights reserved.
+
+This software and its accompanying files (code, images and documentation)
+may not be copied, modified, redistributed or re-uploaded, in whole or in
+part, without the prior written permission of the author.
+
+Other addons and macros may freely use Bridge's public API (BridgeAPI) as
+described in API.md. Using the API does not require permission.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.

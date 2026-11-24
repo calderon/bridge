@@ -1,0 +1,29 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+	<!-- Marcador de una parada: pin verde con el número dentro.
+	     El dibujo tiene el centro de la cabeza en el centro de la imagen (así el número
+	     queda centrado también cuando otros addons, como AzerothGPS, copian el icono).
+	     La imagen se sube 13 puntos para que la punta caiga en el punto exacto de la parada. -->
+	<Frame name="BridgePinTemplate" mixin="BridgePinMixin" enableMouse="true" virtual="true">
+		<Size x="28" y="28"/>
+		<Layers>
+			<Layer level="ARTWORK">
+				<Texture parentKey="Icon" file="Interface\AddOns\Bridge\Media\pin">
+					<Size x="28" y="28"/>
+					<Anchors>
+						<Anchor point="CENTER" relativePoint="CENTER" x="0" y="13"/>
+					</Anchors>
+				</Texture>
+			</Layer>
+			<Layer level="OVERLAY">
+				<FontString parentKey="Label" inherits="GameFontHighlightSmall" justifyH="CENTER">
+					<Anchors>
+						<Anchor point="CENTER" relativeKey="$parent.Icon" relativePoint="CENTER" x="0" y="0"/>
+					</Anchors>
+				</FontString>
+			</Layer>
+		</Layers>
+		<Scripts>
+			<OnLoad method="OnLoad"/>
+		</Scripts>
+	</Frame>
+</Ui>
