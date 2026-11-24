@@ -311,7 +311,7 @@ local function ShowLog(lines, title)
 		local f = CreateFrame("Frame", "BridgeLogFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
 		f:SetSize(640, 420)
 		f:SetPoint("CENTER")
-		f:SetFrameStrata("DIALOG")
+		f:SetFrameStrata("FULLSCREEN_DIALOG") -- por encima de Gestionar rutas (exportar)
 		f:SetToplevel(true)
 		if f.SetBackdrop then
 			f:SetBackdrop({
@@ -353,6 +353,7 @@ local function ShowLog(lines, title)
 	logFrame.Title:SetText(title or ("Bridge " .. VERSION))
 	logFrame.Edit:SetText(table.concat(lines, "\n"))
 	logFrame:Show()
+	logFrame:Raise()
 	logFrame.Edit:SetFocus()
 	logFrame.Edit:HighlightText()
 end
@@ -1015,6 +1016,20 @@ local function RestartRoute(route)
 	return true
 end
 
+-- Exportar una ruta como texto: "# Bridge: <nombre>" y una línea /way por parada, con el
+-- número de mapa (#mapID) en vez del nombre de la zona, que depende del idioma del juego.
+-- Las descripciones no caben en /way; tu cadáver no se exporta.
+local function ExportRoute(route)
+	local lines = { "# Bridge: " .. (route.name or "?") }
+	for _, st in ipairs(route.stops) do
+		if not st.corpse and st.mapID then
+			local name = (st.name or ""):gsub("[\r\n]", " ")
+			table.insert(lines, string.format("/way #%d %.1f %.1f %s", st.mapID, (st.x or 0) * 100, (st.y or 0) * 100, name))
+		end
+	end
+	return lines
+end
+
 -- Borrar una ruta guardada con sus paradas (la Ruta actual no se borra).
 local function DeleteRoute(route)
 	if not route or route.quick then return end
@@ -1085,7 +1100,8 @@ end
 -- "/way [zona] x y [texto]", también "#mapID x y" y "x,y"
 local function ParseWay(msg)
 	local tokens = {}
-	for t in msg:gsub(",", " "):gmatch("%S+") do table.insert(tokens, t) end
+	-- La coma solo separa coordenadas ("42.5,65.3" o "42.5, 65.3"); en el nombre se respeta
+	for t in msg:gsub("(%d)%s*,%s*(%d)", "%1 %2"):gmatch("%S+") do table.insert(tokens, t) end
 	for i = 1, #tokens - 1 do
 		local x, y = tonumber(tokens[i]), tonumber(tokens[i + 1])
 		if x and y then
@@ -2703,11 +2719,31 @@ local function CreateManager()
 	f.Summary = f:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 	f.Summary:SetPoint("LEFT", search, "RIGHT", 12, 0)
 
+	-- Botón de compartir (rojo, como los del juego, con el símbolo en dorado): abre un menú
+	-- para importar paradas en la ruta elegida o exportarla como líneas /way
 	local import = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-	import:SetSize(150, 22)
+	import:SetSize(28, 22)
 	import:SetPoint("TOPRIGHT", -24, -73)
-	import:SetText(L.IMPORT_OPEN)
-	import:SetScript("OnClick", function() ShowImport(f:Route()) end)
+	import:SetText("")
+	local shareIcon = import:CreateTexture(nil, "OVERLAY")
+	shareIcon:SetTexture("Interface\\AddOns\\Bridge\\Media\\share")
+	shareIcon:SetSize(16, 16)
+	shareIcon:SetPoint("CENTER", 0, 0)
+	import:SetScript("OnEnter", function(self)
+		GameTooltip:SetOwner(self, "ANCHOR_TOP")
+		GameTooltip:SetText(L.IMPORT_EXPORT)
+		GameTooltip:Show()
+	end)
+	import:SetScript("OnLeave", GameTooltip_Hide)
+	import:SetScript("OnClick", function(self)
+		local route = f:Route()
+		ShowMenu(self, {
+			{ text = L.IMPORT_OPEN, func = function() ShowImport(route) end },
+			{ text = L.ROUTE_EXPORT_MENU, disabled = #route.stops == 0, func = function()
+				ShowLog(ExportRoute(route), L.ROUTE_EXPORT_TITLE:format(route.name or "?"))
+			end },
+		}, nil, true)
+	end)
 	f.Import = import
 
 	-- Lista de waypoints
@@ -2879,9 +2915,9 @@ local function CreateManager()
 		-- El nombre ocupa lo que necesita (hasta un máximo), y el icono va justo detrás
 		-- Si la búsqueda no encuentra nada, la cabecera queda vacía
 		local nothing = self.filtering and #results == 0
-		self.RouteName:SetWidth(260)
+		self.RouteName:SetWidth(240)
 		self.RouteName:SetText(nothing and "" or (route.name or "?"))
-		self.RouteName:SetWidth(math.max(1, math.min(math.ceil(self.RouteName:GetStringWidth()) + 2, 260)))
+		self.RouteName:SetWidth(math.max(1, math.min(math.ceil(self.RouteName:GetStringWidth()) + 2, 240)))
 		-- Iconos junto al nombre: en la Ruta actual, duplicar y reiniciar; en las guardadas,
 		-- renombrar, duplicar y borrar. Se colocan seguidos, sin huecos.
 		local current = route.quick == true
