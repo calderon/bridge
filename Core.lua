@@ -611,10 +611,11 @@ local function RenameStop(index, newName, newDesc, setDesc, route)
 end
 
 -- Nombre de ruta sin repetir: si ya existe, se le añade " (2)", " (3)"…
-local function UniqueRouteName(name)
+-- except: una ruta que no cuenta (la que se está renombrando)
+local function UniqueRouteName(name, except)
 	local function Taken(candidate)
 		for _, route in ipairs(DB.routes) do
-			if (route.name or ""):lower() == candidate:lower() then return true end
+			if route ~= except and (route.name or ""):lower() == candidate:lower() then return true end
 		end
 	end
 	local candidate, n = name, 1
@@ -630,6 +631,16 @@ local function CreateRoute(name)
 	local route = NewRoute(UniqueRouteName(name))
 	Print(L.ROUTE_CREATED:format(route.name))
 	return route
+end
+
+-- Cambiar el nombre de una ruta (sin repetir el de otra)
+local function RenameRoute(route, name)
+	if not (route and name) then return end
+	name = UniqueRouteName(name, route)
+	if name == route.name then return end
+	route.name = name
+	Print(L.ROUTE_RENAMED:format(name))
+	return true
 end
 
 -- Activar una ruta: pasa a ser la que siguen la brújula, el mapa, el minimapa y
@@ -2110,9 +2121,18 @@ local function CreateManager()
 	-- Columna derecha: los waypoints de la ruta elegida
 	f.RouteName = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 	f.RouteName:SetPoint("TOPLEFT", 230, -79)
-	f.RouteName:SetPoint("RIGHT", -184, 0)
 	f.RouteName:SetJustifyH("LEFT")
 	f.RouteName:SetWordWrap(false)
+
+	-- Junto al nombre: renombrar la ruta (misma cajita, encima del icono)
+	f.RenameRoute = IconButton(f, "Interface\\Buttons\\UI-GuildButton-PublicNote-Up", L.ROUTE_RENAME, function(self)
+		local route = f:Route()
+		AskName(route.name, function(name)
+			RenameRoute(route, name)
+			f:Refresh()
+		end, nil, { hint = L.ROUTE_NAME_HINT, noDescription = true, anchor = self })
+	end)
+	f.RenameRoute:SetPoint("LEFT", f.RouteName, "RIGHT", 6, 0)
 
 	-- Buscador, arriba y sobre las dos columnas (por ahora filtra los waypoints de la
 	-- ruta elegida; buscará también en las rutas)
@@ -2196,7 +2216,10 @@ local function CreateManager()
 		self:RefreshRoutes()
 		local route = self:Route()
 		local stops = StopsOf(route)
+		-- El nombre ocupa lo que necesita (hasta un máximo), y el icono va justo detrás
+		self.RouteName:SetWidth(260)
 		self.RouteName:SetText(route.name or "?")
+		self.RouteName:SetWidth(math.min(math.ceil(self.RouteName:GetStringWidth()) + 2, 260))
 		local filter = (self.Search:GetText() or ""):lower():match("^%s*(.-)%s*$")
 		self.filtering = filter ~= ""
 		local shown = 0
