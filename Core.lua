@@ -2055,13 +2055,15 @@ local function CreateManagerRow(f, slot)
 		if i then RemoveStop(i, route) end
 	end)
 	row.Remove:SetPoint("RIGHT", -2, 0)
-	row.Rename = IconButton(row, "Interface\\Buttons\\UI-GuildButton-PublicNote-Up", L.MENU_RENAME, function()
+	-- Editar nombre y descripción (icono ✎ y menú contextual)
+	function row.Edit()
 		local stop, route = row.stop, f:Route()
 		AskName(stop.name, function(newName, newDesc)
 			local i = IndexOf(stop, route)
 			if i then RenameStop(i, newName, newDesc, true, route) end
 		end, stop.desc)
-	end)
+	end
+	row.Rename = IconButton(row, "Interface\\Buttons\\UI-GuildButton-PublicNote-Up", L.MENU_RENAME, row.Edit)
 	row.Rename:SetPoint("RIGHT", row.Remove, "LEFT", -4, 0)
 
 	-- Línea de arriba: nombre. Línea de abajo: zona y coordenadas.
@@ -2081,7 +2083,7 @@ local function CreateManagerRow(f, slot)
 	row:SetScript("OnClick", function(self, mouseButton)
 		if self.wasDragged then self.wasDragged = false return end
 		if mouseButton == "RightButton" then
-			-- Menú contextual: "Mover a ▸" con las demás rutas
+			-- Menú contextual: editar y "Mover a ▸" con las demás rutas
 			local stop, from, targets = self.stop, f:Route(), {}
 			for _, route in ipairs(DB.routes) do
 				if route ~= from then
@@ -2091,6 +2093,7 @@ local function CreateManagerRow(f, slot)
 				end
 			end
 			ShowMenu(self, {
+				{ text = L.MENU_RENAME, func = self.Edit },
 				{ text = L.MENU_MOVE_TO, sub = targets, disabled = #targets == 0 or stop.corpse },
 			}, function(menu) menu:SetPoint("TOPLEFT", self, "BOTTOMLEFT", 40, 4) end, true)
 			return
