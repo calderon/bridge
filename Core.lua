@@ -34,10 +34,44 @@ end
 
 local DB
 
--- La lista de paradas que se está usando. Todo el código la pide aquí, y no a DB
--- directamente: en la 2.0 pasará a ser la lista de waypoints de la ruta activa.
+-- Rutas (2.0): cada ruta tiene id, nombre y su lista de paradas (DB.routes, en orden).
+-- Una ruta activa por personaje (DB.activeRoute = id).
+local DATA_VERSION = 2 -- versión de los datos guardados, para migrar en el futuro
+
+local function NewRoute(name)
+	DB.nextRouteId = (DB.nextRouteId or 0) + 1
+	local route = { id = DB.nextRouteId, name = name, stops = {} }
+	table.insert(DB.routes, route)
+	return route
+end
+
+local function ActiveRoute()
+	for _, route in ipairs(DB.routes) do
+		if route.id == DB.activeRoute then return route end
+	end
+	-- La ruta activa no existe (no debería pasar): la primera, o una nueva
+	local route = DB.routes[1] or NewRoute(L.DEFAULT_ROUTE)
+	DB.activeRoute = route.id
+	return route
+end
+
+-- La lista de paradas que se está usando: la de la ruta activa. Todo el código la
+-- pide aquí, y no a DB directamente.
 local function Stops()
-	return DB.stops
+	return ActiveRoute().stops
+end
+
+-- Datos de la 1.x (una sola lista, DB.stops): pasan a la ruta "Mi ruta", que queda activa
+local function MigrateData()
+	if not DB.routes then
+		DB.routes = {}
+		local route = NewRoute(L.DEFAULT_ROUTE)
+		if type(DB.stops) == "table" then route.stops = DB.stops end
+		DB.activeRoute = route.id
+	end
+	DB.stops = nil
+	DB.keepStops = nil -- opción quitada en la 2.0: las rutas se guardan siempre
+	DB.dataVersion = DATA_VERSION
 end
 
 local routeMode = false
@@ -2096,11 +2130,6 @@ local function CreateMapButton()
 				toggle = function() DB.arrivalBanner = not (DB.arrivalBanner ~= false) end,
 			},
 			{
-				text = L.MENU_KEEP, check = true,
-				checked = function() return DB.keepStops ~= false end,
-				toggle = function() DB.keepStops = not (DB.keepStops ~= false) end,
-			},
-			{
 				text = L.MENU_ASK_NAME, check = true,
 				checked = function() return DB.askName ~= false end,
 				toggle = function() DB.askName = not (DB.askName ~= false) end,
@@ -2887,15 +2916,17 @@ f:SetScript("OnEvent", function(_, event, name)
 		if name == ADDON then
 			BridgeAddonDB = BridgeAddonDB or {}
 			DB = BridgeAddonDB
-			DB.stops = DB.stops or {}
+			MigrateData()
 			if DB.showPins == nil then DB.showPins = true end
 			if DB.showButton == nil then DB.showButton = true end
 			-- Restos de versiones anteriores
 			DB.method, DB.syncAGPS, DB.pinsSmallMaps, DB.lastLog, DB.count, DB.corpseStop = nil, nil, nil, nil, nil, nil
-			for _, st in ipairs(Stops()) do
-				st.id = st.id or NewStopId()
-				st.pendingUntil, st.sentAt, st.inAGPS, st.missingSince = nil, nil, nil, nil
-				st.agpsCont, st.agpsX, st.agpsY, st.temporary = nil, nil, nil, nil
+			for _, route in ipairs(DB.routes) do
+				for _, st in ipairs(route.stops) do
+					st.id = st.id or NewStopId()
+					st.pendingUntil, st.sentAt, st.inAGPS, st.missingSince = nil, nil, nil, nil
+					st.agpsCont, st.agpsX, st.agpsY, st.temporary = nil, nil, nil, nil
+				end
 			end
 		elseif name == "Blizzard_BattlefieldMap" and BattlefieldMapFrame then
 			AttachToMap(BattlefieldMapFrame) -- el mapa de zona que Leatrix también mejora
@@ -2908,12 +2939,6 @@ f:SetScript("OnEvent", function(_, event, name)
 			end
 		end
 	elseif event == "PLAYER_LOGIN" then
-		-- Si las paradas no se guardan entre sesiones, se empieza sin ninguna
-		-- (y se vacía también la ruta de AzerothGPS, que sí guarda la suya)
-		if DB.keepStops == false and #Stops() > 0 then
-			wipe(Stops())
-			C_Timer.After(3, function() ClearStops(true) end)
-		end
 		AttachToMap(WorldMapFrame)
 		CreateMapButton()
 		if BattlefieldMapFrame then AttachToMap(BattlefieldMapFrame) end

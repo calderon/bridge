@@ -65,7 +65,7 @@ local L = {
 	SHARE_RAID = "Raid",
 	SHARE_BATTLEGROUND = "Battleground",
 	SHARE_GUILD = "Guild",
-	MENU_KEEP = "Keep stops between sessions",
+	DEFAULT_ROUTE = "My route",
 	MENU_COMPASS = "Show compass",
 	MENU_ARRIVAL = "Arrival notice",
 	WAY_RESET_USAGE = "Usage: /way reset all | /way reset <zone> | /way reset not <zone>",
@@ -211,7 +211,7 @@ if locale == "esES" or locale == "esMX" then
 	L.SHARE_RAID = "Banda"
 	L.SHARE_BATTLEGROUND = "Campo de batalla"
 	L.SHARE_GUILD = "Hermandad"
-	L.MENU_KEEP = "Guardar paradas entre sesiones"
+	L.DEFAULT_ROUTE = "Mi ruta"
 	L.MENU_COMPASS = "Mostrar brújula"
 	L.MENU_ARRIVAL = "Aviso al llegar"
 	L.WAY_RESET_USAGE = "Uso: /way reset all | /way reset <zona> | /way reset not <zona>"
