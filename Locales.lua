@@ -91,6 +91,8 @@ local L = {
 	IMPORT_OPEN = "Import stops",
 	IMPORT_EXPORT = "Import / Export",
 	IMPORT_TITLE_ROUTE = "Import stops into “%s”",
+	IMPORT_TITLE_NEW = "Import stops into a new route",
+	IMPORT_AS_NEW = "Import as a new route:",
 	IMPORT_HINT = "Paste /way lines here, one per line. Each one becomes a stop, in order.",
 	IMPORT_CLEAR_FIRST = "Clear this route's stops before importing",
 	IMPORT_BUTTON = "Import",
@@ -300,6 +302,8 @@ if locale == "esES" or locale == "esMX" then
 	L.IMPORT_OPEN = "Importar paradas"
 	L.IMPORT_EXPORT = "Importar / Exportar"
 	L.IMPORT_TITLE_ROUTE = "Importar paradas en «%s»"
+	L.IMPORT_TITLE_NEW = "Importar paradas en una ruta nueva"
+	L.IMPORT_AS_NEW = "Importar como ruta nueva:"
 	L.IMPORT_HINT = "Pega aquí las líneas /way, una por línea. Cada una será una parada, en orden."
 	L.IMPORT_CLEAR_FIRST = "Borrar las paradas de esta ruta antes de importar"
 	L.IMPORT_BUTTON = "Importar"
