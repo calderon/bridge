@@ -13,6 +13,7 @@ Each place you mark is a **stop**: add it with a click, give it a name, and see 
 ### ✨ Features
 
 * **Stops on the world map**: add, move, rename and remove them with the mouse.
+* **Descriptions**: give a stop an optional description; it shows in its tooltip on the map and the minimap.
 * **Names**: each stop can have its own; drop a stop on a map icon and it takes the icon's name.
 * **Minimap**: stops also show while you walk; far-away ones sit on the edge, pointing the way.
 * **Compass**: an on-screen arrow with the next stop's name, distance and estimated time of arrival.
@@ -49,7 +50,7 @@ Open the world map (**M** key).
 | Go only to that point (clears the other stops) | **Alt + Shift + click** | **⌥ + ⇧ + click** |
 | Remove a stop | **Alt + click** on it | **⌥ + click** on it |
 | Move a stop | **Alt + drag** | **⌥ + drag** |
-| Stop menu (rename, share, remove) | **Alt + right-click** | **⌥ + two-finger click** |
+| Stop menu (edit name and description, share, remove) | **Alt + right-click** | **⌥ + two-finger click** |
 | See name, distance and coordinates | Hover over it | Same |
 
 When you add a stop, a small box shows a suggested name: **Enter** accepts it (or type another one), **Esc** cancels.
@@ -61,13 +62,13 @@ When you add a stop, a small box shows a suggested name: **Enter** accepts it (o
 It sits at the top right of the world map. Click it to open its menu:
 
 * **Turn on route mode**: while it is on (the button glows green), a plain click adds stops. It turns off when you close the map.
-* **Manage stops…**: a window with all your stops. Search by name or zone, jump to one on the map (its pin flashes), rename it, remove it, and reorder with ▲▼ or by dragging rows. The **Import /way list** button opens a box where you can paste many `/way` lines at once: each one becomes a stop, in order (with or without `/way` in front). Lines repeating a stop you already have are skipped, and you can tick a box to clear your current stops first.
+* **Manage stops…**: a window with all your stops. Search by name or zone, jump to one on the map (its pin flashes), edit its name and description, remove it, and reorder with ▲▼ or by dragging rows. The **Import /way list** button opens a box where you can paste many `/way` lines at once: each one becomes a stop, in order (with or without `/way` in front). Lines repeating a stop you already have are skipped, and you can tick a box to clear your current stops first.
 * **Clear stops** ▸ **In this zone** (the one shown on the map) or **All**.
 * **Units** ▸ **Yards** or **Meters**. Meters by default (yards if the game is in US English).
 * **Show compass** (off by default).
 * **Show arrival message** (on by default).
 * **Keep stops between sessions** (on by default).
-* **Ask for a name when adding** (on by default).
+* **Ask for a name when adding** (on by default). The box also has an optional **Description** field (Tab to move to it); the description shows in the stop's tooltip on the map and the minimap. You can add or change it later with **Edit name and description**.
 
 To move the button: **Shift + drag** (`/bridge button reset` puts it back).
 
@@ -155,6 +156,7 @@ Cada sitio que marcas es una **parada**: la pones con un clic, le das un nombre 
 ### ✨ Funciones
 
 * **Paradas en el mapa del mundo**: añadir, mover, renombrar y quitar con el ratón.
+* **Descripciones**: añade a una parada una descripción opcional; sale en su tooltip del mapa y del minimapa.
 * **Nombres**: cada parada puede tener el suyo; si pones la parada sobre un icono del mapa, toma su nombre.
 * **Minimapa**: las paradas también se ven al ir caminando; las lejanas se quedan en el borde, señalando hacia dónde están.
 * **Brújula**: flecha en pantalla con el nombre de la siguiente parada, la distancia y el tiempo estimado de llegada.
@@ -191,7 +193,7 @@ Abre el mapa del mundo (tecla **M**).
 | Ir solo a ese punto (borra las demás paradas) | **Alt + Mayús + clic** | **⌥ + ⇧ + clic** |
 | Quitar una parada | **Alt + clic** sobre ella | **⌥ + clic** sobre ella |
 | Mover una parada | **Alt + arrastrar** | **⌥ + arrastrar** |
-| Menú de la parada (renombrar, compartir, quitar) | **Alt + clic derecho** | **⌥ + clic con dos dedos** |
+| Menú de la parada (editar nombre y descripción, compartir, quitar) | **Alt + clic derecho** | **⌥ + clic con dos dedos** |
 | Ver nombre, distancia y coordenadas | Pasar el ratón por encima | Igual |
 
 Al añadir una parada sale una cajita con un nombre propuesto: **Intro** acepta (o escribe otro), **Esc** cancela.
@@ -203,13 +205,13 @@ Al añadir una parada sale una cajita con un nombre propuesto: **Intro** acepta 
 Está arriba a la derecha del mapa del mundo. Haz clic para abrir su menú:
 
 * **Activar modo ruta**: mientras está activo (el botón brilla en verde), basta un clic normal para añadir paradas. Se desactiva al cerrar el mapa.
-* **Gestionar paradas…**: ventana con todas tus paradas. Puedes buscarlas por nombre o zona, ir a una en el mapa (su pin parpadea), renombrarla, quitarla y cambiar el orden con ▲▼ o arrastrando las filas. El botón **Importar lista /way** abre un cuadro donde puedes pegar muchas líneas `/way` a la vez: cada una se convierte en una parada, en orden (con o sin `/way` delante). Las líneas que repiten una parada que ya tienes se saltan, y puedes marcar una casilla para borrar antes tus paradas actuales.
+* **Gestionar paradas…**: ventana con todas tus paradas. Puedes buscarlas por nombre o zona, ir a una en el mapa (su pin parpadea), editar su nombre y descripción, quitarla y cambiar el orden con ▲▼ o arrastrando las filas. El botón **Importar lista /way** abre un cuadro donde puedes pegar muchas líneas `/way` a la vez: cada una se convierte en una parada, en orden (con o sin `/way` delante). Las líneas que repiten una parada que ya tienes se saltan, y puedes marcar una casilla para borrar antes tus paradas actuales.
 * **Borrar paradas** ▸ **De la zona** (la que se ve en el mapa) o **Todas**.
 * **Unidades** ▸ **Yardas** o **Metros**. De entrada, metros (yardas si el juego está en inglés de EE. UU.).
 * **Mostrar brújula** (desactivada de entrada).
 * **Mostrar aviso al llegar** (activado de entrada).
 * **Guardar paradas entre sesiones** (activado de entrada).
-* **Pedir nombre al añadir** (activado de entrada).
+* **Pedir nombre al añadir** (activado de entrada). La caja tiene además un campo opcional de **Descripción** (Tab para pasar a él); la descripción sale en el tooltip de la parada en el mapa y el minimapa. Puedes añadirla o cambiarla después con **Editar nombre y descripción**.
 
 Para mover el botón: **Mayús + arrastrar** (`/bridge button reset` lo devuelve a su sitio).
 

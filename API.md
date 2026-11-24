@@ -33,6 +33,7 @@ Una parada devuelta por la API tiene estos campos:
 | `zone` | Nombre de la zona |
 | `mapID`, `x`, `y` | Zona y coordenadas (0–1) |
 | `source` | Quién la añadió, si se indicó (`"Questie"`, `"/way"`, el nombre de tu addon…) |
+| `description` | Descripción, si tiene (sale en el tooltip) |
 
 ### Funciones
 
@@ -42,7 +43,7 @@ Una parada devuelta por la API tiene estos campos:
 | `BridgeAPI.RouteTo(mapID, x, y [, opts])` | `id` o `nil` | Borra la ruta y deja esta parada como única |
 | `BridgeAPI.RemoveStop(id)` | `true`/`false` | Quita una parada |
 | `BridgeAPI.ClearStops()` | — | Quita todas las paradas |
-| `BridgeAPI.RenameStop(id, nombre)` | `true`/`false` | Cambia el nombre |
+| `BridgeAPI.RenameStop(id, nombre)` | `true`/`false` | Cambia el nombre (la descripción no cambia) |
 | `BridgeAPI.MoveStop(id, mapID, x, y)` | `true`/`false` | Cambia la posición en el mapa |
 | `BridgeAPI.ReorderStop(id, posición)` | `true`/`false` | Cambia su lugar en la ruta (1 = la primera) |
 | `BridgeAPI.GetStop(id)` | parada o `nil` | Una parada |
@@ -58,6 +59,7 @@ Una parada devuelta por la API tiene estos campos:
 | Campo | Qué hace |
 |---|---|
 | `name` | Nombre de la parada. Si no se indica, el de la zona. |
+| `description` | Descripción opcional; sale en el tooltip de la parada |
 | `exclusive` | `true` para borrar la ruta y dejar solo esta (`RouteTo` lo hace siempre) |
 | `source` | Texto que identifica quién la añade (por ejemplo, el nombre de tu addon) |
 | `silent` | `true` para que Bridge no escriba "Parada añadida" en el chat |
@@ -72,7 +74,7 @@ Las paradas añadidas por la API **nunca** muestran la cajita para poner nombre.
 |---|---|---|
 | `STOP_ADDED` | Se añade una parada | La nueva |
 | `STOP_REMOVED` | Se quita una parada | La quitada (`index` ya no aplica) |
-| `STOP_CHANGED` | Se renombra o se mueve | Con los datos nuevos |
+| `STOP_CHANGED` | Se renombra, cambia su descripción o se mueve | Con los datos nuevos |
 | `STOPS_REORDERED` | Cambia el orden | — |
 | `STOPS_CLEARED` | Se borran todas | — |
 
@@ -133,6 +135,7 @@ A stop returned by the API has these fields:
 | `zone` | Zone name |
 | `mapID`, `x`, `y` | Zone and coordinates (0–1) |
 | `source` | Who added it, if given (`"Questie"`, `"/way"`, your addon's name…) |
+| `description` | Description, if any (shown in the tooltip) |
 
 ### Functions
 
@@ -142,7 +145,7 @@ A stop returned by the API has these fields:
 | `BridgeAPI.RouteTo(mapID, x, y [, opts])` | `id` or `nil` | Clears the route and leaves this as the only stop |
 | `BridgeAPI.RemoveStop(id)` | `true`/`false` | Removes a stop |
 | `BridgeAPI.ClearStops()` | — | Removes all stops |
-| `BridgeAPI.RenameStop(id, name)` | `true`/`false` | Changes the name |
+| `BridgeAPI.RenameStop(id, name)` | `true`/`false` | Changes the name (the description is kept) |
 | `BridgeAPI.MoveStop(id, mapID, x, y)` | `true`/`false` | Changes its position on the map |
 | `BridgeAPI.ReorderStop(id, position)` | `true`/`false` | Changes its place in the route (1 = first) |
 | `BridgeAPI.GetStop(id)` | stop or `nil` | One stop |
@@ -158,6 +161,7 @@ A stop returned by the API has these fields:
 | Field | What it does |
 |---|---|
 | `name` | Stop name. If not given, the zone name. |
+| `description` | Optional description; shown in the stop's tooltip |
 | `exclusive` | `true` to clear the route and keep only this one (`RouteTo` always does) |
 | `source` | Text identifying who adds it (for example, your addon's name) |
 | `silent` | `true` so Bridge does not print "Stop added" in chat |
@@ -172,7 +176,7 @@ Stops added through the API **never** show the naming box.
 |---|---|---|
 | `STOP_ADDED` | A stop is added | The new one |
 | `STOP_REMOVED` | A stop is removed | The removed one (`index` no longer applies) |
-| `STOP_CHANGED` | A stop is renamed or moved | With the new data |
+| `STOP_CHANGED` | A stop is renamed, its description changes, or it is moved | With the new data |
 | `STOPS_REORDERED` | The order changes | — |
 | `STOPS_CLEARED` | All stops are cleared | — |
 
