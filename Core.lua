@@ -50,6 +50,26 @@ local function NewRoute(name)
 	return route
 end
 
+-- La ruta Rápida: siempre existe, es la primera de la lista y de cada personaje. Es la
+-- de lo temporal (lo que llega de fuera); no se puede borrar ni renombrar. Al recorrerla
+-- se comporta como las demás: sus paradas no se borran al llegar.
+local function QuickRoute()
+	for _, route in ipairs(DB.routes) do
+		if route.quick then return route end
+	end
+end
+
+local function EnsureQuickRoute()
+	local quick = QuickRoute()
+	if not quick then
+		DB.nextRouteId = (DB.nextRouteId or 0) + 1
+		quick = { id = DB.nextRouteId, stops = {}, quick = true }
+		table.insert(DB.routes, 1, quick)
+	end
+	quick.name = L.QUICK_ROUTE -- siempre en el idioma del juego
+	return quick
+end
+
 local function ActiveRoute()
 	for _, route in ipairs(DB.routes) do
 		if route.id == DB.activeRoute then return route end
@@ -100,6 +120,7 @@ local function MigrateData()
 		if type(DB.stops) == "table" then route.stops = DB.stops end
 		DB.activeRoute = route.id
 	end
+	EnsureQuickRoute()
 	DB.stops = nil
 	DB.keepStops = nil -- opción quitada en la 2.0: las rutas se guardan siempre
 	DB.dataVersion = DATA_VERSION
@@ -695,7 +716,7 @@ end
 
 -- Cambiar el nombre de una ruta (sin repetir el de otra)
 local function RenameRoute(route, name)
-	if not (route and name) then return end
+	if not (route and name) or route.quick then return end
 	name = UniqueRouteName(name, route)
 	if name == route.name then return end
 	route.name = name
@@ -809,16 +830,9 @@ end
 -- Borrar una ruta con sus paradas. Nunca la última. Si era la activa, se activa otra
 -- (ActivateRoute se lleva también tu cadáver, si lo hay).
 local function DeleteRoute(route)
-	if not route then return end
-	if #DB.routes <= 1 then
-		Print(L.ROUTE_LAST)
-		return
-	end
-	if IsActiveRoute(route) then
-		for _, other in ipairs(DB.routes) do
-			if other ~= route then ActivateRoute(other) break end
-		end
-	end
+	if not route or route.quick then return end
+	-- Si era la activa, se activa la Rápida
+	if IsActiveRoute(route) then ActivateRoute(QuickRoute() or EnsureQuickRoute()) end
 	for i, other in ipairs(DB.routes) do
 		if other == route then table.remove(DB.routes, i) break end
 	end
@@ -2584,7 +2598,8 @@ local function CreateManager()
 		SetButtonEnabled(self.RestartRoute, HasReached(route))
 		self.DeleteRoute:SetShown(not nothing)
 		self.Import:SetShown(not nothing)
-		SetButtonEnabled(self.DeleteRoute, #DB.routes > 1)
+		SetButtonEnabled(self.RenameRoute, not route.quick)
+		SetButtonEnabled(self.DeleteRoute, not route.quick)
 		-- Todas las paradas de la ruta, en su orden; las que coinciden, resaltadas
 		local shown = 0
 		for i, st in ipairs(stops) do
@@ -2818,6 +2833,17 @@ end
 ---------------------------------------------------------------------------
 
 local AnnounceArrival -- más abajo (brújula)
+
+-- Llegar a la parada 'index' de la ruta activa: queda guardada, marcada como alcanzada
+-- (en todas las rutas, también la Rápida). Devuelve la parada.
+local function ReachStop(index)
+	local st = Stops()[index]
+	if not st then return end
+	st.reached = true
+	Fire("STOP_REACHED", PublicStop(st))
+	return st
+end
+
 local function HookArrivals()
 	local api = AzerothGPS
 	if type(api) ~= "table" or (tonumber(api.version) or 0) < 14 or type(api.OnArrive) ~= "function" then return end
@@ -2827,10 +2853,11 @@ local function HookArrivals()
 			-- Fin de su ruta: todas las que quedaban se dan por alcanzadas (siguen guardadas).
 			-- Tu cadáver no: se quita al resucitar.
 			local last
-			for _, st in ipairs(Stops()) do
+			for i = #Stops(), 1, -1 do
+				local st = Stops()[i]
 				if not st.reached and not st.corpse then
-					st.reached, last = true, st
-					Fire("STOP_REACHED", PublicStop(st))
+					last = last or st
+					ReachStop(i)
 				end
 			end
 			if last and AnnounceArrival then AnnounceArrival(last, nil) end
@@ -2843,9 +2870,7 @@ local function HookArrivals()
 				end
 			end
 			if best and bestDist < 60 * 60 then
-				local reached = Stops()[best]
-				reached.reached = true
-				Fire("STOP_REACHED", PublicStop(reached))
+				local reached = ReachStop(best)
 				local _, nextStop = NextStopIndex()
 				if AnnounceArrival then AnnounceArrival(reached, nextStop) end
 			end
@@ -2921,13 +2946,11 @@ end
 -- Llegada a una parada: queda guardada en su ruta, marcada como alcanzada, y el
 -- recorrido pasa a la siguiente
 local function ArriveAt(index)
-	local s = Stops()[index]
+	local s = ReachStop(index)
 	if not s then return end
-	s.reached = true
 	RefreshPins()
 	local _, nextStop = NextStopIndex()
 	AnnounceArrival(s, nextStop)
-	Fire("STOP_REACHED", PublicStop(s))
 end
 
 -- Tiempo estimado de llegada: "1:23" o "1:05:30"
