@@ -1821,7 +1821,9 @@ local function ShowMenu(owner, items, anchor, onTop)
 		local menu = MenuUtil.CreateContextMenu(owner, function(_, root)
 			local function build(desc, list)
 				for _, it in ipairs(list) do
-					if it.title then
+					if it.separator then
+						if desc.CreateDivider then desc:CreateDivider() end
+					elseif it.title then
 						desc:CreateTitle(it.text)
 					elseif it.check then
 						desc:CreateCheckbox(it.text, it.checked, it.toggle)
@@ -1849,23 +1851,27 @@ local function ShowMenu(owner, items, anchor, onTop)
 	dropdown = dropdown or CreateFrame("Frame", "BridgeDropDown", UIParent, "UIDropDownMenuTemplate")
 	UIDropDownMenu_Initialize(dropdown, function(_, level, menuList)
 		for _, it in ipairs(menuList or items) do
-			local info = UIDropDownMenu_CreateInfo()
-			info.text = it.text
-			info.notCheckable = true
-			if it.title then
-				info.isTitle = true
-			elseif it.check then
-				info.notCheckable = false
-				info.isNotRadio = true
-				info.keepShownOnClick = true
-				info.checked = it.checked()
-				info.func = function() it.toggle() end
+			if it.separator then
+				if UIDropDownMenu_AddSeparator then UIDropDownMenu_AddSeparator(level) end
 			else
-				info.func = it.func
-				info.disabled = it.disabled
-				if it.sub then info.hasArrow = true; info.menuList = it.sub end
+				local info = UIDropDownMenu_CreateInfo()
+				info.text = it.text
+				info.notCheckable = true
+				if it.title then
+					info.isTitle = true
+				elseif it.check then
+					info.notCheckable = false
+					info.isNotRadio = true
+					info.keepShownOnClick = true
+					info.checked = it.checked()
+					info.func = function() it.toggle() end
+				else
+					info.func = it.func
+					info.disabled = it.disabled
+					if it.sub then info.hasArrow = true; info.menuList = it.sub end
+				end
+				UIDropDownMenu_AddButton(info, level)
 			end
-			UIDropDownMenu_AddButton(info, level)
 		end
 	end, "MENU")
 	-- Siempre bajo el botón, alineado por la derecha
@@ -2049,11 +2055,13 @@ local function CreateManagerRow(f, slot)
 	row.Num:SetJustifyH("RIGHT")
 
 	-- Al final: renombrar y quitar
-	row.Remove = IconButton(row, "Interface\\Buttons\\UI-GroupLoot-Pass-Up", L.MENU_REMOVE, function()
+	-- Quitar (icono ✕ y menú contextual)
+	function row.Remove_()
 		local route = f:Route()
 		local i = IndexOf(row.stop, route)
 		if i then RemoveStop(i, route) end
-	end)
+	end
+	row.Remove = IconButton(row, "Interface\\Buttons\\UI-GroupLoot-Pass-Up", L.MENU_REMOVE, row.Remove_)
 	row.Remove:SetPoint("RIGHT", -2, 0)
 	-- Editar nombre y descripción (icono ✎ y menú contextual)
 	function row.Edit()
@@ -2083,7 +2091,7 @@ local function CreateManagerRow(f, slot)
 	row:SetScript("OnClick", function(self, mouseButton)
 		if self.wasDragged then self.wasDragged = false return end
 		if mouseButton == "RightButton" then
-			-- Menú contextual: editar y "Mover a ▸" con las demás rutas
+			-- Menú contextual: editar, "Mover a ▸" con las demás rutas y, separado al final, quitar
 			local stop, from, targets = self.stop, f:Route(), {}
 			for _, route in ipairs(DB.routes) do
 				if route ~= from then
@@ -2095,6 +2103,8 @@ local function CreateManagerRow(f, slot)
 			ShowMenu(self, {
 				{ text = L.MENU_RENAME, func = self.Edit },
 				{ text = L.MENU_MOVE_TO, sub = targets, disabled = #targets == 0 or stop.corpse },
+				{ separator = true },
+				{ text = L.MENU_REMOVE, func = self.Remove_ },
 			}, function(menu) menu:SetPoint("TOPLEFT", self, "BOTTOMLEFT", 40, 4) end, true)
 			return
 		end
