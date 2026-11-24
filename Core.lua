@@ -39,9 +39,11 @@ end
 
 local DB
 
--- Rutas (2.0): cada ruta tiene id, nombre y su lista de paradas (DB.routes, en orden).
--- Una ruta activa por personaje (DB.activeRoute = id).
-local DATA_VERSION = 2 -- versión de los datos guardados, para migrar en el futuro
+-- Rutas (2.0), modelo "reproductor de música": DB.routes (en orden) tiene la Ruta actual
+-- (route.quick: la primera, de cada personaje) y las rutas guardadas, que son plantillas.
+-- Lo que se recorre es siempre la Ruta actual; cargar una ruta guardada copia sus paradas
+-- en ella. DB.loadedRoute = id de la última ruta guardada cargada (solo como referencia).
+local DATA_VERSION = 3 -- versión de los datos guardados, para migrar en el futuro
 
 local function NewRoute(name)
 	DB.nextRouteId = (DB.nextRouteId or 0) + 1
@@ -50,60 +52,54 @@ local function NewRoute(name)
 	return route
 end
 
--- La ruta Rápida: siempre existe, es la primera de la lista y de cada personaje. Es la
--- de lo temporal (lo que llega de fuera); no se puede borrar ni renombrar. Al recorrerla
--- se comporta como las demás: sus paradas no se borran al llegar.
-local function QuickRoute()
+-- La Ruta actual: siempre existe, es la primera de la lista y de cada personaje. Es la que
+-- siguen la brújula, el mapa, el minimapa y AzerothGPS. No se puede borrar ni renombrar.
+-- (En los datos se marca con route.quick: antes se llamaba "Ruta rápida".)
+local function CurrentRoute()
 	for _, route in ipairs(DB.routes) do
 		if route.quick then return route end
 	end
 end
 
-local function EnsureQuickRoute()
-	local quick = QuickRoute()
-	if not quick then
+local function EnsureCurrentRoute()
+	local current = CurrentRoute()
+	if not current then
 		DB.nextRouteId = (DB.nextRouteId or 0) + 1
-		quick = { id = DB.nextRouteId, stops = {}, quick = true }
-		table.insert(DB.routes, 1, quick)
+		current = { id = DB.nextRouteId, stops = {}, quick = true }
+		table.insert(DB.routes, 1, current)
 	end
-	quick.name = L.QUICK_ROUTE -- siempre en el idioma del juego
-	return quick
+	current.name = L.CURRENT_ROUTE -- siempre en el idioma del juego
+	return current
 end
 
--- Tu cadáver (si lo hay): se guarda en la ruta Rápida (es de cada personaje), pero la
--- brújula y AzerothGPS lo ponen siempre primero, sea cual sea la ruta activa.
+-- Tu cadáver (si lo hay): se guarda en la Ruta actual (es de cada personaje) y va primero
 local function CorpseStop()
-	local quick = QuickRoute()
-	if not quick then return end
-	for _, st in ipairs(quick.stops) do
+	local current = CurrentRoute()
+	if not current then return end
+	for _, st in ipairs(current.stops) do
 		if st.corpse then return st end
 	end
 end
 
+-- La ruta que se recorre: siempre la Ruta actual
 local function ActiveRoute()
-	for _, route in ipairs(DB.routes) do
-		if route.id == DB.activeRoute then return route end
-	end
-	-- La ruta activa no existe (no debería pasar): la primera, o una nueva
-	local route = DB.routes[1] or NewRoute(L.DEFAULT_ROUTE)
-	DB.activeRoute = route.id
-	return route
+	return CurrentRoute() or EnsureCurrentRoute()
 end
 
--- La lista de paradas que se está usando: la de la ruta activa. Todo el código la
+-- La lista de paradas que se está usando: la de la Ruta actual. Todo el código la
 -- pide aquí, y no a DB directamente.
 local function Stops()
 	return ActiveRoute().stops
 end
 
--- Para actuar sobre una ruta concreta (la ventana Gestionar rutas): sin ruta, la activa.
--- Solo la activa se manda a AzerothGPS, al mapa, a la brújula y a los eventos de la API.
+-- Para actuar sobre una ruta concreta (la ventana Gestionar rutas): sin ruta, la actual.
+-- Solo la actual se manda a AzerothGPS, al mapa, a la brújula y a los eventos de la API.
 local function StopsOf(route)
 	return (route or ActiveRoute()).stops
 end
 
 local function IsActiveRoute(route)
-	return not route or route.id == ActiveRoute().id
+	return not route or route.quick == true
 end
 
 -- Recorrido: al llegar a una parada se marca como alcanzada (st.reached) en vez de
@@ -122,7 +118,9 @@ local function NextWaypointIndex()
 	end
 end
 
--- Datos de la 1.x (una sola lista, DB.stops): pasan a la ruta "Mi ruta", que queda activa
+-- Datos de la 1.x (una sola lista, DB.stops): pasan a la ruta guardada "Mi ruta", que se
+-- carga en la Ruta actual. Datos de la 2.0 en desarrollo (versión 2, con "ruta activa"):
+-- la que estaba activa se carga en la Ruta actual, con lo ya recorrido.
 local function MigrateData()
 	if not DB.routes then
 		DB.routes = {}
@@ -130,7 +128,34 @@ local function MigrateData()
 		if type(DB.stops) == "table" then route.stops = DB.stops end
 		DB.activeRoute = route.id
 	end
-	EnsureQuickRoute()
+	local current = EnsureCurrentRoute()
+	if (DB.dataVersion or 0) < 3 then
+		local old
+		for _, route in ipairs(DB.routes) do
+			if route.id == DB.activeRoute and not route.quick then old = route end
+		end
+		if old then
+			-- Se conserva tu cadáver, si lo había; el resto, copia de la que estaba activa
+			for i = #current.stops, 1, -1 do
+				if not current.stops[i].corpse then table.remove(current.stops, i) end
+			end
+			for _, st in ipairs(old.stops) do
+				if not st.corpse then
+					local copy = {}
+					for k, v in pairs(st) do copy[k] = v end
+					table.insert(current.stops, copy)
+				end
+			end
+			DB.loadedRoute = old.id
+		end
+		-- Las rutas guardadas no se recorren: ninguna parada alcanzada
+		for _, route in ipairs(DB.routes) do
+			if not route.quick then
+				for _, st in ipairs(route.stops) do st.reached = nil end
+			end
+		end
+	end
+	DB.activeRoute = nil
 	DB.stops = nil
 	DB.keepStops = nil -- opción quitada en la 2.0: las rutas se guardan siempre
 	DB.dataVersion = DATA_VERSION
@@ -635,9 +660,6 @@ local function RebuildRoute()
 	C_Timer.After(0.2, function()
 		rebuildPending = false
 		SendToGPS("/agps clear")
-		-- Tu cadáver primero (si la activa es la Rápida, ya va en su lista)
-		local corpse = CorpseStop()
-		if corpse and corpse.line and not ActiveRoute().quick then SendToGPS(corpse.line) end
 		for _, other in ipairs(Stops()) do
 			-- Las ya alcanzadas no: AzerothGPS solo lleva lo que queda del recorrido
 			if other.line and not other.reached then SendToGPS(other.line) end
@@ -737,16 +759,37 @@ local function RenameRoute(route, name)
 	return true
 end
 
--- Activar una ruta: pasa a ser la que siguen la brújula, el mapa, el minimapa y
--- AzerothGPS, y su recorrido empieza desde la primera parada.
-local function ActivateRoute(route)
-	if not route then return end
-	DB.activeRoute = route.id
-	for _, st in ipairs(route.stops) do st.reached = nil end
+-- Cargar una ruta guardada en la Ruta actual: sus paradas (copias nuevas) sustituyen a
+-- las que hubiera (tu cadáver se conserva) y el recorrido empieza por la primera. Lo que
+-- luego cambies en la Ruta actual no toca la ruta guardada.
+local function LoadRoute(route)
+	if not route or route.quick then return end
+	local stops = Stops()
+	for i = #stops, 1, -1 do
+		if not stops[i].corpse then table.remove(stops, i) end
+	end
+	for _, st in ipairs(route.stops) do
+		if not st.corpse then
+			local copy = {}
+			for k, v in pairs(st) do copy[k] = v end
+			copy.id, copy.reached = NewStopId(), nil
+			table.insert(stops, copy)
+		end
+	end
+	DB.loadedRoute = route.id
 	RebuildRoute() -- AzerothGPS: borra su ruta y recibe esta
 	RefreshPins()
-	Print(L.ROUTE_ACTIVATED:format(route.name or "?"))
+	Print(L.ROUTE_LOADED:format(route.name or "?"))
 	Fire("ACTIVE_ROUTE_CHANGED", { id = route.id, name = route.name })
+end
+
+-- Paradas de la Ruta actual, sin contar tu cadáver (para avisar antes de sustituirlas)
+local function CurrentStopCount()
+	local n = 0
+	for _, st in ipairs(Stops()) do
+		if not st.corpse then n = n + 1 end
+	end
+	return n
 end
 
 -- Copia de una ruta con todas sus paradas ("<nombre> (copia)"), sin activar.
@@ -829,12 +872,10 @@ local function RestartRoute(route)
 	return true
 end
 
--- Borrar una ruta con sus paradas. Nunca la última. Si era la activa, se activa otra
--- (ActivateRoute se lleva también tu cadáver, si lo hay).
+-- Borrar una ruta guardada con sus paradas (la Ruta actual no se borra).
 local function DeleteRoute(route)
 	if not route or route.quick then return end
-	-- Si era la activa, se activa la Rápida
-	if IsActiveRoute(route) then ActivateRoute(QuickRoute() or EnsureQuickRoute()) end
+	if DB.loadedRoute == route.id then DB.loadedRoute = nil end
 	for i, other in ipairs(DB.routes) do
 		if other == route then table.remove(DB.routes, i) break end
 	end
@@ -2237,15 +2278,14 @@ local function CreateManagerRow(f, slot)
 	return row
 end
 
--- Fila de la lista de rutas (columna izquierda): botón de opción (verde si es la
--- activa; clic en él para activarla), nombre y número de waypoints. Clic en el resto
--- de la fila: elegirla para ver sus waypoints.
+-- Fila de la lista de rutas (columna izquierda): icono de la Ruta actual o botón ▶ para
+-- cargar una ruta guardada, nombre y número de paradas. Clic en el resto de la fila:
+-- elegirla para ver sus paradas.
 local ROUTE_ROW_HEIGHT = 22
+local ROUTE_GAP = 9 -- separación entre la Ruta actual y las guardadas
 local function CreateRouteRow(f, slot)
 	local row = CreateFrame("Button", nil, f.RouteContent)
 	row:SetHeight(ROUTE_ROW_HEIGHT)
-	row:SetPoint("TOPLEFT", f.RouteContent, "TOPLEFT", 0, -(slot - 1) * ROUTE_ROW_HEIGHT)
-	row:SetPoint("RIGHT", f.RouteContent, "RIGHT", 0, 0)
 	row:RegisterForClicks("LeftButtonUp")
 
 	row.Selected = row:CreateTexture(nil, "BACKGROUND")
@@ -2265,36 +2305,60 @@ local function CreateRouteRow(f, slot)
 	hl:SetAllPoints()
 	hl:SetColorTexture(1, 1, 1, 0.08)
 
-	-- Botón de opción: solo una ruta activa. El gris es el mismo icono sin color.
+	-- A la izquierda: en la Ruta actual, su icono (la brújula); en las guardadas, el botón ▶
+	-- para cargarlas en la Ruta actual (verde: la última cargada; amarillo con el ratón)
 	row.Dot = CreateFrame("Button", nil, row)
 	row.Dot:SetSize(16, 16)
 	row.Dot:SetPoint("LEFT", 2, 0)
-	row.Dot:SetNormalTexture("Interface\\COMMON\\Indicator-Green")
-	-- Gris (sin color) si no es la activa; amarillo al pasar el ratón por encima
 	function row.Dot:Paint(hover)
-		local tex, active = self:GetNormalTexture(), IsActiveRoute(row.route)
-		tex:SetDesaturated(not active)
-		if active then
+		local route = row.route
+		if not route then return end
+		if route.quick then
+			self:SetNormalTexture("Interface\\AddOns\\Bridge\\Media\\arrow")
+			local tex = self:GetNormalTexture()
+			tex:SetDesaturated(false)
 			tex:SetVertexColor(1, 1, 1)
 			tex:SetAlpha(1)
-		elseif hover then
+			return
+		end
+		self:SetNormalTexture("Interface\\Buttons\\UI-SpellbookIcon-NextPage-Up")
+		local tex = self:GetNormalTexture()
+		tex:SetDesaturated(true)
+		if hover then
 			tex:SetVertexColor(1, 0.85, 0.1)
+			tex:SetAlpha(1)
+		elseif DB.loadedRoute == route.id then
+			tex:SetVertexColor(0.3, 1, 0.3)
 			tex:SetAlpha(1)
 		else
 			tex:SetVertexColor(1, 1, 1)
 			tex:SetAlpha(0.45)
 		end
 	end
-	row.Dot:SetScript("OnClick", function()
-		if row.route and not IsActiveRoute(row.route) then
-			f.selectedRouteId = row.route.id
-			ActivateRoute(row.route)
+	row.Dot:SetScript("OnClick", function(self)
+		local route = row.route
+		if not route or route.quick then return end
+		local function Load()
+			LoadRoute(route)
+			f.selectedRouteId = ActiveRoute().id -- para ver lo cargado
+			f:Refresh()
 		end
+		-- Si la Ruta actual tiene paradas, se pregunta antes de sustituirlas
+		local n = CurrentStopCount()
+		if n == 0 then Load() return end
+		local text = n == 1 and L.LOAD_CONFIRM_ONE:format(route.name or "?") or L.LOAD_CONFIRM:format(n, route.name or "?")
+		Confirm(text, L.LOAD_YES, Load, self)
 	end)
 	row.Dot:SetScript("OnEnter", function(self)
-		self:Paint(true)
+		local route = row.route
+		if not route then return end
+		self:Paint(not route.quick)
 		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-		GameTooltip:SetText(IsActiveRoute(row.route) and L.ROUTE_IS_ACTIVE or L.ROUTE_ACTIVATE)
+		if route.quick then
+			GameTooltip:SetText(L.CURRENT_ROUTE_TIP, 1, 1, 1, 1, true)
+		else
+			GameTooltip:SetText(DB.loadedRoute == route.id and L.ROUTE_LOADED_TIP or L.ROUTE_LOAD)
+		end
 		GameTooltip:Show()
 	end)
 	row.Dot:SetScript("OnLeave", function(self)
@@ -2375,6 +2439,12 @@ local function CreateManager()
 	f.RouteContent = rcontent
 	f.RouteScrollBar = rsf.ScrollBar or _G["BridgeManagerRouteScrollScrollBar"]
 	f.routeRows = {}
+	-- Línea entre la Ruta actual y las rutas guardadas
+	f.RouteSeparator = rcontent:CreateTexture(nil, "ARTWORK")
+	f.RouteSeparator:SetColorTexture(1, 1, 1, 0.15)
+	f.RouteSeparator:SetHeight(1)
+	f.RouteSeparator:SetPoint("TOPLEFT", rcontent, "TOPLEFT", 4, -ROUTE_ROW_HEIGHT - ROUTE_GAP / 2)
+	f.RouteSeparator:SetPoint("RIGHT", rcontent, "RIGHT", -4, 0)
 
 	-- Bajo la lista de rutas: crear una ruta nueva (queda elegida, no activa)
 	local newRoute = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
@@ -2536,9 +2606,15 @@ local function CreateManager()
 
 	-- results: las rutas que se ven, cada una con { route, nameMatch, stopMatches }
 	function f:RefreshRoutes(results, selected)
+		-- La Ruta actual va la primera y separada de las guardadas por una línea
+		local gap = (results[1] and results[1].route.quick and #results > 1) and ROUTE_GAP or 0
+		self.RouteSeparator:SetShown(gap > 0)
 		for i, res in ipairs(results) do
 			local row = self.routeRows[i] or CreateRouteRow(self, i)
 			self.routeRows[i] = row
+			row:ClearAllPoints()
+			row:SetPoint("TOPLEFT", rcontent, "TOPLEFT", 0, -(i - 1) * ROUTE_ROW_HEIGHT - (i > 1 and gap or 0))
+			row:SetPoint("RIGHT", rcontent, "RIGHT", 0, 0)
 			row.route = res.route
 			row.Name:SetText(res.route.name or "?")
 			if res.nameMatch then row.Name:SetTextColor(1, 0.82, 0) else row.Name:SetTextColor(1, 1, 1) end
@@ -2554,8 +2630,8 @@ local function CreateManager()
 			row:Show()
 		end
 		for k = #results + 1, #self.routeRows do self.routeRows[k]:Hide() end
-		rcontent:SetHeight(math.max(1, #results * ROUTE_ROW_HEIGHT))
-		FitScroll(self.RouteScrollBar, rsf, #results * ROUTE_ROW_HEIGHT)
+		rcontent:SetHeight(math.max(1, #results * ROUTE_ROW_HEIGHT + gap))
+		FitScroll(self.RouteScrollBar, rsf, #results * ROUTE_ROW_HEIGHT + gap)
 	end
 
 	function f:Refresh()
@@ -2594,14 +2670,27 @@ local function CreateManager()
 		self.RouteName:SetWidth(260)
 		self.RouteName:SetText(nothing and "" or (route.name or "?"))
 		self.RouteName:SetWidth(math.max(1, math.min(math.ceil(self.RouteName:GetStringWidth()) + 2, 260)))
-		self.RenameRoute:SetShown(not nothing)
+		-- Iconos junto al nombre: en la Ruta actual, duplicar y reiniciar; en las guardadas,
+		-- renombrar, duplicar y borrar. Se colocan seguidos, sin huecos.
+		local current = route.quick == true
+		self.RenameRoute:SetShown(not nothing and not current)
 		self.DuplicateRoute:SetShown(not nothing)
-		self.RestartRoute:SetShown(not nothing)
+		self.RestartRoute:SetShown(not nothing and current)
 		SetButtonEnabled(self.RestartRoute, HasReached(route))
-		self.DeleteRoute:SetShown(not nothing)
+		self.DeleteRoute:SetShown(not nothing and not current)
+		local previous
+		for _, icon in ipairs({ self.RenameRoute, self.DuplicateRoute, self.RestartRoute, self.DeleteRoute }) do
+			if icon:IsShown() then
+				icon:ClearAllPoints()
+				if previous then
+					icon:SetPoint("LEFT", previous, "RIGHT", 4, 0)
+				else
+					icon:SetPoint("LEFT", self.RouteName, "RIGHT", 6, 0)
+				end
+				previous = icon
+			end
+		end
 		self.Import:SetShown(not nothing)
-		SetButtonEnabled(self.RenameRoute, not route.quick)
-		SetButtonEnabled(self.DeleteRoute, not route.quick)
 		-- Todas las paradas de la ruta, en su orden; las que coinciden, resaltadas
 		local shown = 0
 		for i, st in ipairs(stops) do
@@ -3275,7 +3364,7 @@ local function AddCorpseStop()
 	}
 	-- En la ruta Rápida, el primero. La brújula y AzerothGPS lo ponen delante de la ruta
 	-- activa: primero recuperas el cuerpo, luego sigue la ruta que tenías.
-	table.insert(EnsureQuickRoute().stops, 1, stop)
+	table.insert(EnsureCurrentRoute().stops, 1, stop)
 	RebuildRoute()
 	RefreshPins()
 	Print(L.CORPSE_ADDED)

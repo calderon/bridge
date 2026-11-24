@@ -79,7 +79,7 @@ Las paradas añadidas por la API **nunca** muestran la cajita para poner nombre.
 | `STOP_REACHED` | Se llega a una parada (no se quita: queda marcada como alcanzada) | La alcanzada (`reached = true`) |
 | `STOPS_REORDERED` | Cambia el orden | — |
 | `STOPS_CLEARED` | Se borran todas | — |
-| `ACTIVE_ROUTE_CHANGED` | Se activa otra ruta (sus paradas pasan a ser las de la API) | `{ id, name }` de la ruta activa |
+| `ACTIVE_ROUTE_CHANGED` | Se carga una ruta guardada en la Ruta actual (sus paradas pasan a ser las de la API) | `{ id, name }` de la ruta cargada |
 
 `dueño` identifica a quien escucha (por ejemplo, el nombre de tu addon). Hay una función por dueño y evento: registrar otra la sustituye.
 
@@ -184,7 +184,7 @@ Stops added through the API **never** show the naming box.
 | `STOP_REACHED` | A stop is reached (it is not removed: it is marked as reached) | The reached one (`reached = true`) |
 | `STOPS_REORDERED` | The order changes | — |
 | `STOPS_CLEARED` | All stops are cleared | — |
-| `ACTIVE_ROUTE_CHANGED` | Another route is activated (its stops become the API's stops) | `{ id, name }` of the active route |
+| `ACTIVE_ROUTE_CHANGED` | A saved route is loaded into the Current route (its stops become the API's stops) | `{ id, name }` of the loaded route |
 
 `owner` identifies the listener (for example, your addon's name). There is one function per owner and event: registering another one replaces it.
 
