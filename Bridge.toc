@@ -9,6 +9,7 @@
 ## Version: 1.0.0
 # x-release-please-end
 ## Category: Map
+## X-Curse-Project-ID: 1826744
 ## OptionalDeps: AzerothGPS, Leatrix_Maps, Questie, TomTom
 ## SavedVariablesPerCharacter: BridgeAddonDB
 

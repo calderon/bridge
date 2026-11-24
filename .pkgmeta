@@ -1,0 +1,21 @@
+# BigWigs Packager: how the release zip is built (Bridge-vX.Y.Z.zip with Bridge/ inside)
+package-as: Bridge
+
+manual-changelog:
+  filename: CHANGELOG.md
+  markup-type: markdown
+
+# Development files: not part of the addon
+ignore:
+  - CLAUDE.md
+  - .claude
+  - .github
+  - .husky
+  - .gitmessage
+  - .pkgmeta
+  - node_modules
+  - package.json
+  - package-lock.json
+  - commitlint.config.mjs
+  - release-please-config.json
+  - .release-please-manifest.json
