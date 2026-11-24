@@ -33,6 +33,13 @@ local function ApplyLook(icon, label, stop, number, size, hover)
 end
 
 local DB
+
+-- La lista de paradas que se está usando. Todo el código la pide aquí, y no a DB
+-- directamente: en la 2.0 pasará a ser la lista de waypoints de la ruta activa.
+local function Stops()
+	return DB.stops
+end
+
 local routeMode = false
 local providers = {}
 local managerFrame -- ventana "Gestionar paradas" (se crea al abrirla por primera vez)
@@ -67,7 +74,7 @@ end
 local function PublicStop(s)
 	if not s then return nil end
 	local index
-	for i, st in ipairs(DB.stops) do
+	for i, st in ipairs(Stops()) do
 		if st == s then index = i break end
 	end
 	return {
@@ -310,7 +317,7 @@ local function CommitStop(zMap, zx, zy, zoneName, name, exclusive, opts)
 	opts = opts or {}
 	if exclusive then
 		SendToGPS("/agps clear")
-		wipe(DB.stops)
+		wipe(Stops())
 		Fire("STOPS_CLEARED")
 	end
 	local line = string.format("/way %s %.1f %.1f %s", zoneName, zx * 100, zy * 100, name)
@@ -321,7 +328,7 @@ local function CommitStop(zMap, zx, zy, zoneName, name, exclusive, opts)
 			cont = cont, wx = wx, wy = wy, line = line, source = opts.source,
 			desc = CleanName(opts.description),
 		}
-		table.insert(DB.stops, stop)
+		table.insert(Stops(), stop)
 		if not opts.silent then
 			Print(string.format("%s: |cffffd100%s|r (%s %.1f, %.1f)",
 				exclusive and L.DIRECT_ROUTE or L.STOP_ADDED, name, zoneName, zx * 100, zy * 100))
@@ -458,17 +465,17 @@ local function RebuildRoute()
 	C_Timer.After(0.2, function()
 		rebuildPending = false
 		SendToGPS("/agps clear")
-		for _, other in ipairs(DB.stops) do
+		for _, other in ipairs(Stops()) do
 			if other.line then SendToGPS(other.line) end
 		end
 	end)
 end
 
 local function RemoveStop(index)
-	local s = DB.stops[index]
+	local s = Stops()[index]
 	if not s then return end
 	local public = PublicStop(s)
-	table.remove(DB.stops, index)
+	table.remove(Stops(), index)
 	RebuildRoute()
 	RefreshPins()
 	Print(L.STOP_REMOVED:format(s.name or "?"))
@@ -477,7 +484,7 @@ end
 
 local function ClearStops(silent)
 	SendToGPS("/agps clear")
-	wipe(DB.stops)
+	wipe(Stops())
 	RefreshPins()
 	if not silent then Print(L.ROUTE_CLEARED) end
 	Fire("STOPS_CLEARED")
@@ -486,10 +493,10 @@ end
 -- Quita de golpe todas las paradas que cumplan 'match' (una sola reconstrucción)
 local function RemoveStopsWhere(match)
 	local removed = {}
-	for i = #DB.stops, 1, -1 do
-		if match(DB.stops[i]) then
-			table.insert(removed, PublicStop(DB.stops[i]))
-			table.remove(DB.stops, i)
+	for i = #Stops(), 1, -1 do
+		if match(Stops()[i]) then
+			table.insert(removed, PublicStop(Stops()[i]))
+			table.remove(Stops(), i)
 		end
 	end
 	if #removed > 0 then
@@ -502,7 +509,7 @@ end
 
 -- Cambia el nombre y, si se pasa (aunque sea nil, para quitarla), la descripción
 local function RenameStop(index, newName, newDesc, setDesc)
-	local s = DB.stops[index]
+	local s = Stops()[index]
 	if not s or not newName then return end
 	local nameChanged = newName ~= s.name
 	local descChanged = setDesc and newDesc ~= s.desc
@@ -626,7 +633,7 @@ local function OnExternalWay(msg)
 	end
 	local mapID, x, y, text = ParseWay(msg)
 	if not mapID then return false end
-	for _, s in ipairs(DB.stops) do
+	for _, s in ipairs(Stops()) do
 		if s.mapID == mapID and math.abs(s.x - x) < 0.002 and math.abs(s.y - y) < 0.002 then return true end
 	end
 	local info = C_Map.GetMapInfo(mapID)
@@ -637,7 +644,7 @@ local function OnExternalWay(msg)
 		id = NewStopId(), name = text, zone = zoneName, mapID = mapID, x = x, y = y, cont = cont, wx = wx, wy = wy,
 		line = string.format("/way %s %.1f %.1f %s", zoneName, x * 100, y * 100, text), source = "/way",
 	}
-	table.insert(DB.stops, stop)
+	table.insert(Stops(), stop)
 	RefreshPins()
 	Fire("STOP_ADDED", PublicStop(stop))
 	if DB.debug then Print(L.DEBUG_EXTERNAL:format(text)) end
@@ -665,7 +672,7 @@ local function HookChatBoxes()
 					OnExternalWay(wayArgs)
 				elseif t:lower():match("^%s*/agps%s+clear%s*$") then
 					-- Borraste la ruta de AzerothGPS a mano: Bridge también la borra
-					wipe(DB.stops)
+					wipe(Stops())
 					RefreshPins()
 					Fire("STOPS_CLEARED")
 				end
@@ -741,7 +748,7 @@ end
 
 -- ¿Ya hay una parada en ese sitio? (mismo criterio que /way)
 local function StopExistsAt(mapID, x, y)
-	for _, s in ipairs(DB.stops) do
+	for _, s in ipairs(Stops()) do
 		if s.mapID == mapID and math.abs(s.x - x) < 0.002 and math.abs(s.y - y) < 0.002 then return true end
 	end
 	return false
@@ -891,7 +898,7 @@ end
 
 -- Mueve una parada a otro punto y rehace la ruta de AzerothGPS
 local function MoveStop(index, mapID, x, y)
-	local s = DB.stops[index]
+	local s = Stops()[index]
 	if not s then return end
 	local zMap, zx, zy, zoneName = ToZone(mapID, x, y)
 	if not zMap then
@@ -1279,7 +1286,7 @@ function ProviderMixin:RefreshAllData()
 	if map ~= WorldMapFrame then return end
 	local mapID = map:GetMapID()
 	if not mapID then return end
-	for i, s in ipairs(DB.stops) do
+	for i, s in ipairs(Stops()) do
 		-- Tu cadáver ya lo marca el juego (lápida en el mapa, flecha en el minimapa)
 		if s.cont and s.wx and not s.corpse then
 			local _, pos = C_Map.GetMapPosFromWorldPos(s.cont, CreateVector2D(s.wx, s.wy), mapID)
@@ -1309,7 +1316,7 @@ local function StopUnderCursor(map, cx, cy)
 	if not (mapID and canvas and cx) then return end
 	local scale = (map.GetCanvasScale and map:GetCanvasScale()) or 1
 	local w, h = canvas:GetWidth() * scale, canvas:GetHeight() * scale
-	for i, s in ipairs(DB.stops) do
+	for i, s in ipairs(Stops()) do
 		if s.cont and s.wx then
 			local _, pos = C_Map.GetMapPosFromWorldPos(s.cont, CreateVector2D(s.wx, s.wy), mapID)
 			if pos then
@@ -1602,7 +1609,7 @@ OpenStopMenu = function(pin)
 		{ text = L.MENU_RENAME, func = function()
 			AskName(s.name, function(newName, newDesc)
 				-- Por si la lista cambió mientras escribías
-				for i, st in ipairs(DB.stops) do
+				for i, st in ipairs(Stops()) do
 					if st == s then RenameStop(i, newName, newDesc, true) return end
 				end
 			end, s.desc)
@@ -1614,7 +1621,7 @@ OpenStopMenu = function(pin)
 			{ text = L.SHARE_GUILD, disabled = not inGuild, func = function() ShareStop(s, "GUILD") end },
 		} },
 		{ text = L.MENU_REMOVE, func = function()
-			for i, st in ipairs(DB.stops) do
+			for i, st in ipairs(Stops()) do
 				if st == s then RemoveStop(i) return end
 			end
 		end },
@@ -1630,10 +1637,10 @@ local ROW_HEIGHT = 36 -- dos líneas: nombre, y debajo zona y coordenadas
 
 -- Cambia una parada de posición y rehace la ruta de AzerothGPS en el orden nuevo
 local function MoveStopTo(from, to)
-	local n = #DB.stops
-	if not DB.stops[from] or to < 1 or to > n or to == from then return end
-	local s = table.remove(DB.stops, from)
-	table.insert(DB.stops, to, s)
+	local n = #Stops()
+	if not Stops()[from] or to < 1 or to > n or to == from then return end
+	local s = table.remove(Stops(), from)
+	table.insert(Stops(), to, s)
 	RebuildRoute()
 	RefreshPins()
 	Fire("STOPS_REORDERED")
@@ -1641,7 +1648,7 @@ local function MoveStopTo(from, to)
 end
 
 local function IndexOf(stop)
-	for i, st in ipairs(DB.stops) do
+	for i, st in ipairs(Stops()) do
 		if st == stop then return i end
 	end
 end
@@ -1650,7 +1657,7 @@ end
 -- (detrás de tu cadáver, si lo hay: eso va siempre primero)
 local function CwayCommand()
 	local best, bestD
-	for i, st in ipairs(DB.stops) do
+	for i, st in ipairs(Stops()) do
 		if not st.corpse then
 			local d = DistanceTo(st)
 			if d and (not bestD or d < bestD) then best, bestD = i, d end
@@ -1660,8 +1667,8 @@ local function CwayCommand()
 		Print(L.CWAY_NONE)
 		return
 	end
-	local stop = DB.stops[best]
-	local target = (DB.stops[1] and DB.stops[1].corpse) and 2 or 1
+	local stop = Stops()[best]
+	local target = (Stops()[1] and Stops()[1].corpse) and 2 or 1
 	MoveStopTo(best, target)
 	Print(L.CWAY_DONE:format(stop.name or "?", FormatDistance(bestD)))
 end
@@ -1890,7 +1897,7 @@ local function CreateManager()
 		local _, cy = GetCursorPosition()
 		cy = cy / content:GetEffectiveScale()
 		local slot = math.floor((content:GetTop() - cy) / ROW_HEIGHT + 0.5)
-		slot = math.max(0, math.min(slot, #DB.stops))
+		slot = math.max(0, math.min(slot, #Stops()))
 		f.dropIndex = slot + 1
 		f.DropLine:ClearAllPoints()
 		f.DropLine:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -slot * ROW_HEIGHT + 1)
@@ -1901,7 +1908,7 @@ local function CreateManager()
 		local filter = (self.Search:GetText() or ""):lower():match("^%s*(.-)%s*$")
 		self.filtering = filter ~= ""
 		local shown = 0
-		for i, st in ipairs(DB.stops) do
+		for i, st in ipairs(Stops()) do
 			local name, zone = (st.name or ""):lower(), (st.zone or ""):lower()
 			if not self.filtering or name:find(filter, 1, true) or zone:find(filter, 1, true) then
 				shown = shown + 1
@@ -1912,7 +1919,7 @@ local function CreateManager()
 				row.Name:SetText(st.name or "?")
 				row.Zone:SetText(string.format("%s (%.1f, %.1f)", st.zone or "?", (st.x or 0) * 100, (st.y or 0) * 100))
 				SetButtonEnabled(row.Up, not self.filtering and i > 1)
-				SetButtonEnabled(row.Down, not self.filtering and i < #DB.stops)
+				SetButtonEnabled(row.Down, not self.filtering and i < #Stops())
 				row:Show()
 			end
 		end
@@ -1925,7 +1932,7 @@ local function CreateManager()
 			if not needed then self.Content:GetParent():SetVerticalScroll(0) end
 		end
 		if shown == 0 then
-			self.Empty:SetText(#DB.stops == 0 and L.MANAGER_EMPTY or L.MANAGER_NO_MATCH)
+			self.Empty:SetText(#Stops() == 0 and L.MANAGER_EMPTY or L.MANAGER_NO_MATCH)
 			self.Empty:Show()
 		else
 			self.Empty:Hide()
@@ -2134,26 +2141,26 @@ local function HookArrivals()
 		if type(info) ~= "table" then return end
 		if info.last then
 			-- Tu cadáver no se quita al llegar, sino al resucitar
-			local last, corpse = DB.stops[#DB.stops], nil
-			for _, st in ipairs(DB.stops) do if st.corpse then corpse = st end end
-			wipe(DB.stops)
-			if corpse then table.insert(DB.stops, corpse) end
+			local last, corpse = Stops()[#Stops()], nil
+			for _, st in ipairs(Stops()) do if st.corpse then corpse = st end end
+			wipe(Stops())
+			if corpse then table.insert(Stops(), corpse) end
 			Fire("STOPS_CLEARED")
 			if last and not last.corpse and AnnounceArrival then AnnounceArrival(last, nil) end
 		elseif info.x and info.y then
 			local best, bestDist
-			for i, s in ipairs(DB.stops) do
+			for i, s in ipairs(Stops()) do
 				if s.wx and not s.corpse and (not info.cont or s.cont == info.cont) then
 					local d = (s.wx - info.x) ^ 2 + (s.wy - info.y) ^ 2
 					if not bestDist or d < bestDist then best, bestDist = i, d end
 				end
 			end
 			if best and bestDist < 60 * 60 then
-				local reached = DB.stops[best]
+				local reached = Stops()[best]
 				local public = PublicStop(reached)
-				table.remove(DB.stops, best)
+				table.remove(Stops(), best)
 				Fire("STOP_REMOVED", public)
-				if AnnounceArrival then AnnounceArrival(reached, DB.stops[best] or DB.stops[1]) end
+				if AnnounceArrival then AnnounceArrival(reached, Stops()[best] or Stops()[1]) end
 			end
 		end
 		RefreshPins()
@@ -2225,12 +2232,12 @@ function AnnounceArrival(s, nextStop)
 end
 
 local function ArriveAt(index)
-	local s = DB.stops[index]
+	local s = Stops()[index]
 	if not s then return end
 	local public = PublicStop(s)
-	table.remove(DB.stops, index)
+	table.remove(Stops(), index)
 	RefreshPins()
-	AnnounceArrival(s, DB.stops[index] or DB.stops[1])
+	AnnounceArrival(s, Stops()[index] or Stops()[1])
 	Fire("STOP_REMOVED", public)
 end
 
@@ -2275,11 +2282,11 @@ local function UpdateCompass(self, elapsed)
 	self.wait = (self.wait or 0) - elapsed
 	if self.wait > 0 then return end
 	self.wait = 0.05
-	local stop = DB.stops[1]
+	local stop = Stops()[1]
 	if not stop then self:Hide() return end
 	local eta = UpdateETA(self, stop, DistanceTo(stop))
 	self.ETA:SetText(eta and L.ETA:format(FormatETA(eta)) or "")
-	local count = #DB.stops
+	local count = #Stops()
 	self.Name:SetText(count > 1 and string.format("%s |cff999999(1/%d)|r", stop.name or "?", count) or (stop.name or "?"))
 	local d = DistanceTo(stop)
 	local bearing = BearingTo(stop)
@@ -2358,7 +2365,7 @@ end
 -- Se muestra cuando está activada y hay paradas
 function UpdateCompassShown()
 	if not DB then return end
-	if DB.showCompass and #DB.stops > 0 then
+	if DB.showCompass and #Stops() > 0 then
 		CreateCompass().wait = 0
 		compass:Show()
 	elseif compass then
@@ -2437,7 +2444,7 @@ local function UpdateMinimapPins()
 	local cosF, sinF = math.cos(-facing), math.sin(-facing)
 	local square = GetMinimapShape and GetMinimapShape() == "SQUARE"
 	local shown = 0
-	for i, st in ipairs(DB.stops) do
+	for i, st in ipairs(Stops()) do
 		if st.wx and st.cont == instance and not st.corpse then
 			-- En coordenadas de mundo, x es el norte e y el oeste
 			local east, north = py - st.wy, st.wx - px
@@ -2459,7 +2466,7 @@ local function UpdateMinimapPins()
 			pin.stop = st
 			ApplyLook(pin.Icon, pin.Label, st, i, MINI_SIZE)
 			pin:SetAlpha(edge and 0.6 or 1)
-			pin:SetFrameLevel(Minimap:GetFrameLevel() + 5 + (#DB.stops - i))
+			pin:SetFrameLevel(Minimap:GetFrameLevel() + 5 + (#Stops() - i))
 			pin:ClearAllPoints()
 			pin:SetPoint("CENTER", Minimap, "CENTER", x * halfW, y * halfH)
 			pin:Show()
@@ -2515,11 +2522,11 @@ end
 
 local function RemoveCorpseStop()
 	local removed = false
-	for i = #DB.stops, 1, -1 do
-		local st = DB.stops[i]
+	for i = #Stops(), 1, -1 do
+		local st = Stops()[i]
 		if st.corpse then
 			local public = PublicStop(st)
-			table.remove(DB.stops, i)
+			table.remove(Stops(), i)
 			Fire("STOP_REMOVED", public)
 			removed = true
 		end
@@ -2545,7 +2552,7 @@ local function AddCorpseStop()
 		line = string.format("/way %s %.1f %.1f %s", zoneName, zx * 100, zy * 100, L.CORPSE),
 	}
 	-- Delante de todo: primero recuperas el cuerpo, luego sigue la ruta que tenías
-	table.insert(DB.stops, 1, stop)
+	table.insert(Stops(), 1, stop)
 	RebuildRoute()
 	RefreshPins()
 	Print(L.CORPSE_ADDED)
@@ -2568,8 +2575,8 @@ end
 
 local function StartCorpseWatch()
 	-- No se guarda entre sesiones: si entras siendo fantasma, se vuelve a poner
-	for i = #DB.stops, 1, -1 do
-		if DB.stops[i].corpse then table.remove(DB.stops, i) end
+	for i = #Stops(), 1, -1 do
+		if Stops()[i].corpse then table.remove(Stops(), i) end
 	end
 	if UnitIsGhost("player") then C_Timer.After(2, AddCorpseStop) end
 	local ev = CreateFrame("Frame")
@@ -2638,7 +2645,7 @@ local KNOWN_EVENTS = {}
 for _, e in ipairs(API.events) do KNOWN_EVENTS[e] = true end
 
 local function FindById(id)
-	for i, st in ipairs(DB.stops) do
+	for i, st in ipairs(Stops()) do
 		if st.id == id then return i, st end
 	end
 end
@@ -2695,7 +2702,7 @@ end
 function API.ReorderStop(id, position)
 	local i = FindById(id)
 	if not (i and type(position) == "number") then return false end
-	position = math.max(1, math.min(math.floor(position), #DB.stops))
+	position = math.max(1, math.min(math.floor(position), #Stops()))
 	if position == i then return true end
 	return MoveStopTo(i, position) or false
 end
@@ -2709,7 +2716,7 @@ end
 function API.GetStops()
 	local list = {}
 	if DB then
-		for _, st in ipairs(DB.stops) do table.insert(list, PublicStop(st)) end
+		for _, st in ipairs(Stops()) do table.insert(list, PublicStop(st)) end
 	end
 	return list
 end
@@ -2847,8 +2854,8 @@ HandleSlash = function(cmd, arg)
 		ForEachMapPin(WorldMapFrame, function() pins = pins + 1 end)
 		for _ in pairs(hookedFrames) do hooked = hooked + 1 end
 		Print(L.DIAG_PINS:format(pins, hooked))
-		Print(L.DIAG_STOPS:format(#DB.stops, DB.debug and L.YES or L.NO))
-		local first = DB.stops[1]
+		Print(L.DIAG_STOPS:format(#Stops(), DB.debug and L.YES or L.NO))
+		local first = Stops()[1]
 		local d = first and DistanceTo(first)
 		Print(L.DIAG_COMPASS:format(DB.showCompass and L.YES or L.NO,
 			(BridgeCompass and BridgeCompass:IsShown()) and L.YES or L.NO,
@@ -2885,7 +2892,7 @@ f:SetScript("OnEvent", function(_, event, name)
 			if DB.showButton == nil then DB.showButton = true end
 			-- Restos de versiones anteriores
 			DB.method, DB.syncAGPS, DB.pinsSmallMaps, DB.lastLog, DB.count, DB.corpseStop = nil, nil, nil, nil, nil, nil
-			for _, st in ipairs(DB.stops) do
+			for _, st in ipairs(Stops()) do
 				st.id = st.id or NewStopId()
 				st.pendingUntil, st.sentAt, st.inAGPS, st.missingSince = nil, nil, nil, nil
 				st.agpsCont, st.agpsX, st.agpsY, st.temporary = nil, nil, nil, nil
@@ -2903,8 +2910,8 @@ f:SetScript("OnEvent", function(_, event, name)
 	elseif event == "PLAYER_LOGIN" then
 		-- Si las paradas no se guardan entre sesiones, se empieza sin ninguna
 		-- (y se vacía también la ruta de AzerothGPS, que sí guarda la suya)
-		if DB.keepStops == false and #DB.stops > 0 then
-			wipe(DB.stops)
+		if DB.keepStops == false and #Stops() > 0 then
+			wipe(Stops())
 			C_Timer.After(3, function() ClearStops(true) end)
 		end
 		AttachToMap(WorldMapFrame)
