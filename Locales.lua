@@ -104,8 +104,6 @@ local L = {
 	SEARCH_ROUTES = "%d routes",
 	SEARCH_STOP = "%d stop",
 	SEARCH_STOPS = "%d stops",
-	TIP_UP = "Move up",
-	TIP_DOWN = "Move down",
 	MENU_RENAME = "Edit name and description",
 	MENU_SHARE = "Share with",
 	SHARE_PARTY = "Party",
@@ -314,8 +312,6 @@ if locale == "esES" or locale == "esMX" then
 	L.SEARCH_ROUTES = "%d rutas"
 	L.SEARCH_STOP = "%d parada"
 	L.SEARCH_STOPS = "%d paradas"
-	L.TIP_UP = "Subir"
-	L.TIP_DOWN = "Bajar"
 	L.MENU_RENAME = "Editar nombre y descripción"
 	L.MENU_SHARE = "Compartir con"
 	L.SHARE_PARTY = "Grupo"

@@ -2258,7 +2258,7 @@ end
 -- arrastrando, importar). Lo que se hace aquí actúa sobre la ruta elegida.
 ---------------------------------------------------------------------------
 
-local ROW_HEIGHT = 36 -- dos líneas: nombre, y debajo zona y coordenadas
+local ROW_HEIGHT = 44 -- hasta tres líneas: nombre, descripción, y zona con coordenadas
 
 -- Cambia una parada de posición y rehace la ruta de AzerothGPS en el orden nuevo
 local function MoveStopTo(from, to, route)
@@ -2376,24 +2376,16 @@ local function CreateManagerRow(f, slot)
 	row.Match:SetColorTexture(1, 0.82, 0, 0.16)
 	row.Match:Hide()
 
-	-- Al principio: subir y bajar
-	row.Up = IconButton(row, "Interface\\ChatFrame\\UI-ChatIcon-ScrollUp-Up", L.TIP_UP, function()
-		local route = f:Route()
-		local i = IndexOf(row.stop, route)
-		if i then MoveStopTo(i, i - 1, route) end
-	end)
-	row.Up:SetPoint("TOPLEFT", 2, -2)
-	row.Down = IconButton(row, "Interface\\ChatFrame\\UI-ChatIcon-ScrollDown-Up", L.TIP_DOWN, function()
-		local route = f:Route()
-		local i = IndexOf(row.stop, route)
-		if i then MoveStopTo(i, i + 1, route) end
-	end)
-	row.Down:SetPoint("TOP", row.Up, "BOTTOM", 0, 0)
+	-- A la izquierda: el asa (dos rayas), para que se vea que la fila se arrastra
+	row.Handle = row:CreateTexture(nil, "ARTWORK")
+	row.Handle:SetTexture("Interface\\AddOns\\Bridge\\Media\\drag")
+	row.Handle:SetSize(16, 16)
+	row.Handle:SetPoint("LEFT", 2, 0)
 
 	-- Número: el mismo que lleva el pin en el mapa (discreto, en gris)
 	row.Num = row:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-	row.Num:SetPoint("LEFT", row, "LEFT", 22, 0)
-	row.Num:SetWidth(18)
+	row.Num:SetPoint("LEFT", row, "LEFT", 16, 0) -- justo detrás del asa
+	row.Num:SetWidth(16)
 	row.Num:SetJustifyH("RIGHT")
 
 	-- Al final: renombrar y quitar
@@ -2416,37 +2408,31 @@ local function CreateManagerRow(f, slot)
 	row.Rename = IconButton(row, "Interface\\Buttons\\UI-GuildButton-PublicNote-Up", L.MENU_RENAME, row.Edit)
 	row.Rename:SetPoint("RIGHT", row.Remove, "LEFT", -4, 0)
 
-	-- Línea de arriba: nombre (izquierda) y zona con coordenadas (derecha). Debajo: descripción.
-	-- Zona y coordenadas a la derecha (antes de los iconos), ocupando lo que necesiten
-	row.Zone = row:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-	row.Zone:SetJustifyH("RIGHT")
-	row.Zone:SetWordWrap(false)
-
-	-- Nombre a la izquierda, hasta la zona (si no cabe, se corta con "…")
+	-- Nombre arriba, con toda la fila hasta los iconos (si no cabe, se corta con "…"); debajo,
+	-- la descripción (si la tiene) y después la zona con las coordenadas
 	row.Name = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
 	row.Name:SetJustifyH("LEFT")
 	row.Name:SetWordWrap(false)
 
-	-- Descripción: debajo del nombre, en una línea
 	row.Desc = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	row.Desc:SetPoint("TOPLEFT", row.Name, "BOTTOMLEFT", 0, -3)
+	row.Desc:SetPoint("TOPLEFT", row.Name, "BOTTOMLEFT", 0, -2)
 	row.Desc:SetPoint("RIGHT", row, "RIGHT", -46, 0)
 	row.Desc:SetJustifyH("LEFT")
 	row.Desc:SetWordWrap(false)
 	row.Desc:SetTextColor(0.75, 0.75, 0.75)
 
-	-- Con descripción: nombre y zona arriba, descripción debajo. Sin ella: centrados en la fila.
+	row.Zone = row:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+	row.Zone:SetJustifyH("LEFT")
+	row.Zone:SetWordWrap(false)
+
+	-- Con descripción, tres líneas; sin ella, dos, centradas en la fila
 	function row:Layout(hasDesc)
-		self.Zone:ClearAllPoints()
 		self.Name:ClearAllPoints()
-		if hasDesc then
-			self.Zone:SetPoint("TOPRIGHT", self, "TOPRIGHT", -46, -7)
-			self.Name:SetPoint("TOPLEFT", self, "TOPLEFT", 48, -4)
-		else
-			self.Zone:SetPoint("RIGHT", self, "RIGHT", -46, 0)
-			self.Name:SetPoint("LEFT", self, "LEFT", 48, 0)
-		end
-		self.Name:SetPoint("RIGHT", self.Zone, "LEFT", -10, 0)
+		self.Zone:ClearAllPoints()
+		self.Name:SetPoint("TOPLEFT", self, "TOPLEFT", 40, hasDesc and -5 or -10)
+		self.Name:SetPoint("RIGHT", self, "RIGHT", -46, 0)
+		self.Zone:SetPoint("TOPLEFT", hasDesc and self.Desc or self.Name, "BOTTOMLEFT", 0, -2)
+		self.Zone:SetPoint("RIGHT", self, "RIGHT", -46, 0)
 		self.Desc:SetShown(hasDesc)
 	end
 	row:Layout(false)
@@ -3086,8 +3072,6 @@ local function CreateManager()
 			row.Zone:SetText(string.format("%s (%.1f, %.1f)", st.zone or "?", (st.x or 0) * 100, (st.y or 0) * 100))
 			row.Desc:SetText(st.desc or "")
 			row:Layout(st.desc ~= nil)
-			SetButtonEnabled(row.Up, i > 1)
-			SetButtonEnabled(row.Down, i < #stops)
 			row:Show()
 		end
 		for k = shown + 1, #self.rows do self.rows[k]:Hide() end
