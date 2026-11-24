@@ -127,6 +127,48 @@ local function CorpseStop()
 	end
 end
 
+-- La última ruta guardada que se cargó en la Ruta actual (nil si ninguna o si se borró)
+local function LoadedRoute()
+	if not DB.loadedRoute then return end
+	for _, route in ipairs(DB.routes) do
+		if route.id == DB.loadedRoute then return route end
+	end
+	if SharedDB then
+		for _, route in ipairs(SharedDB.routes) do
+			if route.id == DB.loadedRoute then return route end
+		end
+	end
+end
+
+-- ¿La Ruta actual sigue siendo igual que la ruta cargada? Mismas paradas, en el mismo
+-- orden, con el mismo nombre, descripción y posición. Llegar a una parada no cuenta, y tu
+-- cadáver tampoco. Se compara cada vez: si deshaces un cambio, vuelve a coincidir.
+local function SameStops(a, b)
+	local i, j = 1, 1
+	while true do
+		while a[i] and a[i].corpse do i = i + 1 end
+		while b[j] and b[j].corpse do j = j + 1 end
+		local x, y = a[i], b[j]
+		if not x or not y then return x == y end
+		if x.name ~= y.name or x.desc ~= y.desc or x.mapID ~= y.mapID or x.x ~= y.x or x.y ~= y.y then
+			return false
+		end
+		i, j = i + 1, j + 1
+	end
+end
+
+-- Nombre para mostrar de lo que se recorre: "Ruta B", "Ruta B (modificada)" o nil si no se
+-- ha cargado ninguna ruta guardada
+local function LoadedRouteLabel()
+	local loaded = LoadedRoute()
+	if not loaded then return end
+	local current = CurrentRoute()
+	if current and not SameStops(current.stops, loaded.stops) then
+		return L.ROUTE_MODIFIED:format(loaded.name or "?")
+	end
+	return loaded.name
+end
+
 -- La ruta que se recorre: siempre la Ruta actual
 local function ActiveRoute()
 	return CurrentRoute() or EnsureCurrentRoute()
@@ -641,16 +683,15 @@ local function Confirm(text, yesText, onYes, anchor)
 		f.Text = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
 		f.Text:SetPoint("TOPLEFT", 12, -12)
 		f.Text:SetPoint("TOPRIGHT", -12, -12)
-		f.Text:SetJustifyH("LEFT")
+		f.Text:SetJustifyH("CENTER")
 		f.Text:SetWordWrap(true)
 		f.No = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
 		f.No:SetSize(100, 22)
-		f.No:SetPoint("BOTTOMRIGHT", -10, 10)
 		f.No:SetText(CANCEL or "Cancel")
 		f.No:SetScript("OnClick", function() f:Hide() end)
 		f.Yes = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
 		f.Yes:SetSize(100, 22)
-		f.Yes:SetPoint("RIGHT", f.No, "LEFT", -6, 0)
+		f.No:SetPoint("LEFT", f.Yes, "RIGHT", 6, 0)
 		f.Yes:SetScript("OnClick", function()
 			local cb = f.onYes
 			f.onYes = nil
@@ -667,7 +708,13 @@ local function Confirm(text, yesText, onYes, anchor)
 	local fs = f.Yes:GetFontString()
 	local yesWidth = math.max(100, math.ceil(fs and fs:GetStringWidth() or 0) + 28)
 	f.Yes:SetWidth(yesWidth)
-	f:SetWidth(math.max(280, yesWidth + 100 + 6 + 20))
+	local width = math.max(280, yesWidth + 100 + 6 + 20)
+	f:SetWidth(width)
+	-- Los dos botones, juntos y centrados
+	f.Yes:ClearAllPoints()
+	f.Yes:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", math.floor((width - (yesWidth + 6 + 100)) / 2), 10)
+	-- El ancho del texto se fija antes de medir su alto (si no, se mide en una sola línea)
+	f.Text:SetWidth(width - 24)
 	f.Text:SetText(text)
 	f:SetHeight(math.ceil(f.Text:GetStringHeight()) + 52)
 	f:ClearAllPoints()
@@ -2398,7 +2445,7 @@ local function CreateRouteRow(f, slot)
 		-- Si la Ruta actual tiene paradas, se pregunta antes de sustituirlas
 		local n = CurrentStopCount()
 		if n == 0 then Load() return end
-		local text = n == 1 and L.LOAD_CONFIRM_ONE:format(route.name or "?") or L.LOAD_CONFIRM:format(n, route.name or "?")
+		local text = L.LOAD_CONFIRM:format(route.name or "?") .. "\n" .. (n == 1 and L.LOAD_REPLACE_ONE or L.LOAD_REPLACE:format(n))
 		Confirm(text, L.LOAD_YES, Load, self)
 	end)
 	row.Dot:SetScript("OnEnter", function(self)
@@ -2998,6 +3045,7 @@ local function CreateMapButton()
 		GameTooltip:ClearAllPoints()
 		GameTooltip:SetPoint("TOPRIGHT", self, "BOTTOMRIGHT", 0, -2)
 		GameTooltip:SetText("Bridge")
+		GameTooltip:AddLine(L.BUTTON_TIP_ROUTE:format(LoadedRouteLabel() or L.CURRENT_ROUTE), 1, 0.82, 0)
 		if routeMode then
 			GameTooltip:AddLine(L.ROUTE_MODE_ON, 0.2, 1, 0.2, true)
 		end
@@ -3185,8 +3233,13 @@ local function UpdateCompass(self, elapsed)
 	if not stop then self:Hide() return end
 	local eta = UpdateETA(self, stop, DistanceTo(stop))
 	self.ETA:SetText(eta and L.ETA:format(FormatETA(eta)) or "")
-	local count = #Stops()
-	self.Name:SetText((index and count > 1) and string.format("%s |cff999999(%d/%d)|r", stop.name or "?", index, count) or (stop.name or "?"))
+	-- Arriba, en gris: la ruta (la última cargada, o "Ruta actual") y la posición; debajo, la parada
+	if index then
+		self.Route:SetText(string.format("%s · %d/%d", LoadedRouteLabel() or L.CURRENT_ROUTE, index, #Stops()))
+	else
+		self.Route:SetText("") -- tu cadáver: no es de ninguna ruta
+	end
+	self.Name:SetText(stop.name or "?")
 	local d = DistanceTo(stop)
 	local bearing = BearingTo(stop)
 	local facing = GetPlayerFacing and GetPlayerFacing()
@@ -3217,7 +3270,7 @@ end
 local function CreateCompass()
 	if compass then return compass end
 	compass = CreateFrame("Frame", "BridgeCompass", UIParent)
-	compass:SetSize(140, 104)
+	compass:SetSize(140, 118)
 	compass:SetFrameStrata("MEDIUM")
 	compass:SetClampedToScreen(true)
 	compass:SetMovable(true)
@@ -3230,8 +3283,13 @@ local function CreateCompass()
 	compass.Arrow:SetSize(44, 44)
 	compass.Arrow:SetPoint("TOP", 0, 0)
 
+	compass.Route = compass:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+	compass.Route:SetPoint("TOP", compass.Arrow, "BOTTOM", 0, -2)
+	compass.Route:SetWidth(240)
+	compass.Route:SetWordWrap(false)
+
 	compass.Name = compass:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-	compass.Name:SetPoint("TOP", compass.Arrow, "BOTTOM", 0, -2)
+	compass.Name:SetPoint("TOP", compass.Route, "BOTTOM", 0, -2)
 	compass.Name:SetWidth(240)
 	compass.Name:SetWordWrap(false)
 
