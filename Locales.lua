@@ -64,6 +64,8 @@ local L = {
 	ROUTE_RENAMED = "Route renamed: %s",
 	ROUTE_DESC_CHANGED = "Route description changed: %s",
 	ROUTE_DUPLICATE = "Duplicate route",
+	ROUTE_EXPORT_MENU = "Export route",
+	ROUTE_EXPORT_TITLE = "Export “%s” (descriptions are not included)",
 	ROUTE_COPY_NAME = "%s (copy)",
 	ROUTE_DUPLICATED = "Route duplicated: %s",
 	ROUTE_RESTART = "Restart the route from its first stop",
@@ -87,6 +89,7 @@ local L = {
 
 	-- Importar una lista de /way
 	IMPORT_OPEN = "Import stops",
+	IMPORT_EXPORT = "Import / Export",
 	IMPORT_TITLE_ROUTE = "Import stops into “%s”",
 	IMPORT_HINT = "Paste /way lines here, one per line. Each one becomes a stop, in order.",
 	IMPORT_CLEAR_FIRST = "Clear this route's stops before importing",
@@ -271,6 +274,8 @@ if locale == "esES" or locale == "esMX" then
 	L.ROUTE_RENAMED = "Ruta renombrada: %s"
 	L.ROUTE_DESC_CHANGED = "Descripción de la ruta cambiada: %s"
 	L.ROUTE_DUPLICATE = "Duplicar ruta"
+	L.ROUTE_EXPORT_MENU = "Exportar ruta"
+	L.ROUTE_EXPORT_TITLE = "Exportar «%s» (sin las descripciones)"
 	L.ROUTE_COPY_NAME = "%s (copia)"
 	L.ROUTE_DUPLICATED = "Ruta duplicada: %s"
 	L.ROUTE_RESTART = "Reiniciar la ruta desde su primera parada"
@@ -293,6 +298,7 @@ if locale == "esES" or locale == "esMX" then
 	L.MENU_COPY_TO = "Copiar a"
 
 	L.IMPORT_OPEN = "Importar paradas"
+	L.IMPORT_EXPORT = "Importar / Exportar"
 	L.IMPORT_TITLE_ROUTE = "Importar paradas en «%s»"
 	L.IMPORT_HINT = "Pega aquí las líneas /way, una por línea. Cada una será una parada, en orden."
 	L.IMPORT_CLEAR_FIRST = "Borrar las paradas de esta ruta antes de importar"
