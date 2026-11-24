@@ -2051,6 +2051,12 @@ local function CreateManagerRow(f, slot)
 	hl:SetAllPoints()
 	hl:SetColorTexture(1, 1, 1, 0.08)
 
+	-- Coincide con la búsqueda: fondo dorado (y el nombre en amarillo)
+	row.Match = row:CreateTexture(nil, "BACKGROUND")
+	row.Match:SetAllPoints()
+	row.Match:SetColorTexture(1, 0.82, 0, 0.16)
+	row.Match:Hide()
+
 	-- Al principio: subir y bajar
 	row.Up = IconButton(row, "Interface\\ChatFrame\\UI-ChatIcon-ScrollUp-Up", L.TIP_UP, function()
 		local route = f:Route()
@@ -2156,7 +2162,6 @@ local function CreateManagerRow(f, slot)
 
 	-- Arrastrar para reordenar (no mientras se filtra: el orden visible no es el real)
 	row:SetScript("OnDragStart", function(self)
-		if f.filtering then return end
 		self.wasDragged = true
 		f.dragRow = self
 		self:SetAlpha(0.5)
@@ -2205,6 +2210,11 @@ local function CreateRouteRow(f, slot)
 	row.Selected = row:CreateTexture(nil, "BACKGROUND")
 	row.Selected:SetAllPoints()
 	row.Selected:SetColorTexture(0.25, 0.45, 0.85, 0.35)
+	-- Su nombre coincide con la búsqueda: fondo dorado
+	row.Match = row:CreateTexture(nil, "BACKGROUND", nil, 1)
+	row.Match:SetAllPoints()
+	row.Match:SetColorTexture(1, 0.82, 0, 0.16)
+	row.Match:Hide()
 	-- Al arrastrar una parada encima: se moverá a esta ruta
 	row.DropTarget = row:CreateTexture(nil, "BORDER")
 	row.DropTarget:SetAllPoints()
@@ -2397,11 +2407,16 @@ local function CreateManager()
 	search:HookScript("OnEscapePressed", function(self) self:ClearFocus() end)
 	f.Search = search
 
+	-- A la derecha del buscador: cuántas rutas y paradas coinciden
+	f.Summary = f:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+	f.Summary:SetPoint("LEFT", search, "RIGHT", 12, 0)
+
 	local import = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
 	import:SetSize(150, 22)
 	import:SetPoint("TOPRIGHT", -24, -73)
 	import:SetText(L.IMPORT_OPEN)
 	import:SetScript("OnClick", function() ShowImport(f:Route()) end)
+	f.Import = import
 
 	-- Lista de waypoints
 	local sf = CreateFrame("ScrollFrame", "BridgeManagerScroll", f, "UIPanelScrollFrameTemplate")
@@ -2462,62 +2477,112 @@ local function CreateManager()
 		if not needed then scroll:SetVerticalScroll(0) end
 	end
 
-	function f:RefreshRoutes()
-		local selected = self:Route()
-		for i, route in ipairs(DB.routes) do
+	-- Búsqueda: en el nombre de las rutas y en las paradas (nombre, descripción y zona)
+	local function Matches(text, filter)
+		return text and text:lower():find(filter, 1, true) ~= nil
+	end
+	local function StopMatches(st, filter)
+		return Matches(st.name, filter) or Matches(st.desc, filter) or Matches(st.zone, filter)
+	end
+	local function Count(n, one, many) return (n == 1 and one or many):format(n) end
+
+	-- results: las rutas que se ven, cada una con { route, nameMatch, stopMatches }
+	function f:RefreshRoutes(results, selected)
+		for i, res in ipairs(results) do
 			local row = self.routeRows[i] or CreateRouteRow(self, i)
 			self.routeRows[i] = row
-			row.route = route
-			row.Name:SetText(route.name or "?")
-			row.Count:SetText(string.format("(%d)", #route.stops))
+			row.route = res.route
+			row.Name:SetText(res.route.name or "?")
+			if res.nameMatch then row.Name:SetTextColor(1, 0.82, 0) else row.Name:SetTextColor(1, 1, 1) end
+			row.Match:SetShown(res.nameMatch)
+			-- (5) normalmente; al buscar, (2/5): 2 de sus 5 paradas coinciden (el 2 en amarillo)
+			if res.stopMatches > 0 then
+				row.Count:SetText(string.format("(|cffffd100%d|r/%d)", res.stopMatches, #res.route.stops))
+			else
+				row.Count:SetText(string.format("(%d)", #res.route.stops))
+			end
 			row.Dot:Paint(row.Dot:IsMouseOver())
-			row.Selected:SetShown(route == selected)
+			row.Selected:SetShown(res.route == selected)
 			row:Show()
 		end
-		for k = #DB.routes + 1, #self.routeRows do self.routeRows[k]:Hide() end
-		rcontent:SetHeight(math.max(1, #DB.routes * ROUTE_ROW_HEIGHT))
-		FitScroll(self.RouteScrollBar, rsf, #DB.routes * ROUTE_ROW_HEIGHT)
+		for k = #results + 1, #self.routeRows do self.routeRows[k]:Hide() end
+		rcontent:SetHeight(math.max(1, #results * ROUTE_ROW_HEIGHT))
+		FitScroll(self.RouteScrollBar, rsf, #results * ROUTE_ROW_HEIGHT)
 	end
 
 	function f:Refresh()
-		self:RefreshRoutes()
-		local route = self:Route()
-		local stops = StopsOf(route)
-		-- El nombre ocupa lo que necesita (hasta un máximo), y el icono va justo detrás
-		self.RouteName:SetWidth(260)
-		self.RouteName:SetText(route.name or "?")
-		self.RouteName:SetWidth(math.min(math.ceil(self.RouteName:GetStringWidth()) + 2, 260))
-		SetButtonEnabled(self.DeleteRoute, #DB.routes > 1)
 		local filter = (self.Search:GetText() or ""):lower():match("^%s*(.-)%s*$")
 		self.filtering = filter ~= ""
+		-- Rutas que se ven: todas, o al buscar, las que coinciden por nombre o por alguna parada
+		local results, matchingStops = {}, 0
+		for _, route in ipairs(DB.routes) do
+			local nameMatch, stopMatches = self.filtering and Matches(route.name, filter), 0
+			if self.filtering then
+				for _, st in ipairs(route.stops) do
+					if StopMatches(st, filter) then stopMatches = stopMatches + 1 end
+				end
+			end
+			if not self.filtering or nameMatch or stopMatches > 0 then
+				table.insert(results, { route = route, nameMatch = nameMatch and true or false, stopMatches = stopMatches })
+				matchingStops = matchingStops + stopMatches
+			end
+		end
+		-- La ruta elegida, si no está entre los resultados, pasa a ser la primera de ellos
+		local route = self:Route()
+		local inResults = false
+		for _, res in ipairs(results) do if res.route == route then inResults = true end end
+		if not inResults and results[1] then
+			route = results[1].route
+			self.selectedRouteId = route.id
+		end
+		self:RefreshRoutes(results, route)
+		self.Summary:SetText(self.filtering
+			and (Count(#results, L.SEARCH_ROUTE, L.SEARCH_ROUTES) .. " · " .. Count(matchingStops, L.SEARCH_STOP, L.SEARCH_STOPS))
+			or "")
+		local stops = (self.filtering and #results == 0) and {} or StopsOf(route)
+		-- El nombre ocupa lo que necesita (hasta un máximo), y el icono va justo detrás
+		-- Si la búsqueda no encuentra nada, la cabecera queda vacía
+		local nothing = self.filtering and #results == 0
+		self.RouteName:SetWidth(260)
+		self.RouteName:SetText(nothing and "" or (route.name or "?"))
+		self.RouteName:SetWidth(math.max(1, math.min(math.ceil(self.RouteName:GetStringWidth()) + 2, 260)))
+		self.RenameRoute:SetShown(not nothing)
+		self.DuplicateRoute:SetShown(not nothing)
+		self.DeleteRoute:SetShown(not nothing)
+		self.Import:SetShown(not nothing)
+		SetButtonEnabled(self.DeleteRoute, #DB.routes > 1)
+		-- Todas las paradas de la ruta, en su orden; las que coinciden, resaltadas
 		local shown = 0
 		for i, st in ipairs(stops) do
-			local name, zone = (st.name or ""):lower(), (st.zone or ""):lower()
-			if not self.filtering or name:find(filter, 1, true) or zone:find(filter, 1, true) then
-				shown = shown + 1
-				local row = self.rows[shown] or CreateManagerRow(self, shown)
-				self.rows[shown] = row
-				row.index, row.stop = i, st
-				row.Num:SetText(i)
-				row.Name:SetText(st.name or "?")
-				row.Zone:SetText(string.format("%s (%.1f, %.1f)", st.zone or "?", (st.x or 0) * 100, (st.y or 0) * 100))
-				row.Desc:SetText(st.desc or "")
-				row:Layout(st.desc ~= nil)
-				SetButtonEnabled(row.Up, not self.filtering and i > 1)
-				SetButtonEnabled(row.Down, not self.filtering and i < #stops)
-				row:Show()
-			end
+			shown = shown + 1
+			local row = self.rows[shown] or CreateManagerRow(self, shown)
+			self.rows[shown] = row
+			row.index, row.stop = i, st
+			row.Num:SetText(i)
+			row.Name:SetText(st.name or "?")
+			local match = self.filtering and StopMatches(st, filter)
+			row.Match:SetShown(match)
+			if match then row.Name:SetTextColor(1, 0.82, 0) else row.Name:SetTextColor(1, 1, 1) end
+			row.Zone:SetText(string.format("%s (%.1f, %.1f)", st.zone or "?", (st.x or 0) * 100, (st.y or 0) * 100))
+			row.Desc:SetText(st.desc or "")
+			row:Layout(st.desc ~= nil)
+			SetButtonEnabled(row.Up, i > 1)
+			SetButtonEnabled(row.Down, i < #stops)
+			row:Show()
 		end
 		for k = shown + 1, #self.rows do self.rows[k]:Hide() end
 		content:SetHeight(math.max(1, shown * ROW_HEIGHT))
 		FitScroll(self.ScrollBar, sf, shown * ROW_HEIGHT)
-		if shown == 0 then
-			self.Empty:SetText(#stops == 0 and L.MANAGER_EMPTY or L.MANAGER_NO_MATCH)
+		if self.filtering and #results == 0 then
+			self.Empty:SetText(L.MANAGER_NO_MATCH)
+			self.Empty:Show()
+		elseif shown == 0 then
+			self.Empty:SetText(L.MANAGER_EMPTY)
 			self.Empty:Show()
 		else
 			self.Empty:Hide()
 		end
-		self.Hint:SetText(self.filtering and L.MANAGER_FILTERING or L.MANAGER_HINT)
+		self.Hint:SetText(L.MANAGER_HINT)
 	end
 
 	f:SetScript("OnShow", function(self) self:Refresh() end)
