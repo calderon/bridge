@@ -67,11 +67,11 @@ It sits at the top right of the world map. Click it to open its menu:
   * Your **saved routes** are templates: they never change while you walk. Click a route's **▶** to **load** it into the Current route: its stops replace the ones there (it asks first if there were any; your corpse stays) and you start from its first stop. The ▶ of the last route you loaded stays green. Changes you make in the Current route are temporary; to keep them, duplicate it (+).
   * **Shared with my characters** (checkbox under a saved route's stops): the route is seen and edited by all the characters of your account, and shows in blue in the list. What each character walks is still its own, in its Current route. Unsharing it (after confirming) keeps it only for this character.
   * While this window is open, **Alt+click** on the map adds the stop to the saved route you have selected (with the window closed, or with the Current route selected, it goes to the Current route). **Alt+Shift+click** always goes to the Current route.
-  * **New route** (under the list) asks for a name and creates an empty route. Next to the route's name: + duplicates it (a copy with all its stops); on the Current route, ⟳ restarts it; on a saved route, ✎ renames it and ✕ deletes it with its stops (after confirming).
+  * **New route** (under the list) asks for a name and creates an empty route. Next to the route's name: + duplicates it (a copy with all its stops); on the Current route, ⟳ restarts it and ✕ empties it (after confirming); on a saved route, ✎ renames it and ✕ deletes it with its stops (after confirming).
   * The search box on top looks in route names and in the stops of every route (name, description and zone): the list shows the matching routes (e.g. (2/5): 2 of its 5 stops match), and matches are highlighted in gold.
   * Jump to a stop on the map (its pin flashes), edit its name and description, remove it, and reorder with ▲▼ or by dragging rows. To move a stop to another route, drag it onto that route in the list on the left, or right-click it and choose **Move to**. To copy it instead (the original stays), hold Shift when you drop it, or choose **Copy to**. The right-click menu also has **Edit name and description** and, at the end, **Remove**.
   * The **Import /way list** button opens a box where you can paste many `/way` lines at once: each one becomes a stop, in order (with or without `/way` in front). Lines repeating a stop you already have are skipped, and you can tick a box to clear the route's stops first.
-* **Clear stops** ▸ **In this zone** (the one shown on the map) or **All**.
+* **Empty Current route** (it asks first). Saved routes are never emptied from here, and your corpse stays.
 * **Units** ▸ **Yards** or **Meters**. Meters by default (yards if the game is in US English).
 * **Show compass** (off by default).
 * **Arrival notice** (on by default): the banner, the chat line and the sound. Turn it off to reach stops silently: the route still advances.
@@ -98,7 +98,7 @@ Almost everything is done from the map and the button.
 | `/bridge` | Help. |
 | `/bridge manage` | Open the "Manage routes" window. |
 | `/bridge import` | Paste a list of `/way` lines to add them as stops. |
-| `/bridge clear` | Clear all stops. |
+| `/bridge clear` | Empty the Current route (your corpse stays). |
 | `/bridge markers` | Show or hide the markers (map and minimap). |
 | `/bridge size N` | Marker size, 30 to 200 (%). |
 | `/bridge button` | Show or hide the map button. |
@@ -217,11 +217,11 @@ Está arriba a la derecha del mapa del mundo. Haz clic para abrir su menú:
   * Tus **rutas guardadas** son plantillas: no cambian mientras las recorres. Pulsa el **▶** de una ruta para **cargarla** en la Ruta actual: sus paradas sustituyen a las que hubiera (pregunta antes si había alguna; tu cadáver se queda) y empiezas por su primera parada. El ▶ de la última ruta que cargaste se queda en verde. Lo que cambies en la Ruta actual es temporal; para conservarlo, duplícala (+).
   * **Compartida con mis personajes** (casilla bajo las paradas de una ruta guardada): la ruta la ven y editan todos los personajes de tu cuenta, y sale en azul en la lista. Lo que recorre cada personaje sigue siendo suyo, en su Ruta actual. Al dejar de compartirla (tras confirmarlo), se queda solo para este personaje.
   * Con esta ventana abierta, **Alt+clic** en el mapa añade la parada a la ruta guardada que tengas elegida (con la ventana cerrada, o con la Ruta actual elegida, va a la Ruta actual). **Alt+Mayús+clic** va siempre a la Ruta actual.
-  * **Nueva ruta** (bajo la lista) pide un nombre y crea una ruta vacía. Junto al nombre de la ruta: + la duplica (una copia con todas sus paradas); en la Ruta actual, ⟳ la reinicia; en una ruta guardada, ✎ la renombra y ✕ la borra con sus paradas (tras confirmarlo).
+  * **Nueva ruta** (bajo la lista) pide un nombre y crea una ruta vacía. Junto al nombre de la ruta: + la duplica (una copia con todas sus paradas); en la Ruta actual, ⟳ la reinicia y ✕ la vacía (tras confirmarlo); en una ruta guardada, ✎ la renombra y ✕ la borra con sus paradas (tras confirmarlo).
   * El buscador de arriba mira en los nombres de las rutas y en las paradas de todas ellas (nombre, descripción y zona): la lista muestra las rutas que coinciden (p. ej. (2/5): coinciden 2 de sus 5 paradas) y las coincidencias se resaltan en dorado.
   * Puedes ir a una parada en el mapa (su pin parpadea), editar su nombre y descripción, quitarla y cambiar el orden con ▲▼ o arrastrando las filas. Para mover una parada a otra ruta, arrástrala sobre esa ruta en la lista de la izquierda, o haz clic derecho sobre ella y elige **Mover a**. Para copiarla (la original se queda), mantén pulsada Mayús al soltarla, o elige **Copiar a**. El menú del clic derecho tiene también **Editar nombre y descripción** y, al final, **Quitar**.
   * El botón **Importar lista /way** abre un cuadro donde puedes pegar muchas líneas `/way` a la vez: cada una se convierte en una parada, en orden (con o sin `/way` delante). Las líneas que repiten una parada que ya tienes se saltan, y puedes marcar una casilla para borrar antes las paradas de la ruta.
-* **Borrar paradas** ▸ **De la zona** (la que se ve en el mapa) o **Todas**.
+* **Vaciar Ruta actual** (pregunta antes). Desde aquí nunca se vacía una ruta guardada, y tu cadáver se queda.
 * **Unidades** ▸ **Yardas** o **Metros**. De entrada, metros (yardas si el juego está en inglés de EE. UU.).
 * **Mostrar brújula** (desactivada de entrada).
 * **Aviso al llegar** (activado de entrada): el cartel, la línea en el chat y el sonido. Desactívalo para llegar a las paradas sin avisos: la ruta sigue avanzando.
@@ -248,7 +248,7 @@ Casi todo se hace desde el mapa y el botón. Los comandos se escriben siempre en
 | `/bridge` | Ayuda. |
 | `/bridge manage` | Abrir la ventana "Gestionar rutas". |
 | `/bridge import` | Pegar una lista de líneas `/way` para añadirlas como paradas. |
-| `/bridge clear` | Borrar todas las paradas. |
+| `/bridge clear` | Vaciar la Ruta actual (tu cadáver se queda). |
 | `/bridge markers` | Mostrar u ocultar los marcadores (mapa y minimapa). |
 | `/bridge size N` | Tamaño de los marcadores, de 30 a 200 (%). |
 | `/bridge button` | Mostrar u ocultar el botón del mapa. |
