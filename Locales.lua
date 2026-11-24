@@ -58,6 +58,8 @@ local L = {
 	ROUTE_DUPLICATE = "Duplicate route",
 	ROUTE_COPY_NAME = "%s (copy)",
 	ROUTE_DUPLICATED = "Route duplicated: %s",
+	ROUTE_RESTART = "Restart the route from its first stop",
+	ROUTE_RESTARTED = "Route restarted: %s",
 	ROUTE_DELETE = "Delete route",
 	ROUTE_DELETE_YES = "Delete",
 	ROUTE_DELETE_CONFIRM = "Delete the route “%s” and its %d stops?",
@@ -232,6 +234,8 @@ if locale == "esES" or locale == "esMX" then
 	L.ROUTE_DUPLICATE = "Duplicar ruta"
 	L.ROUTE_COPY_NAME = "%s (copia)"
 	L.ROUTE_DUPLICATED = "Ruta duplicada: %s"
+	L.ROUTE_RESTART = "Reiniciar la ruta desde su primera parada"
+	L.ROUTE_RESTARTED = "Ruta reiniciada: %s"
 	L.ROUTE_DELETE = "Borrar ruta"
 	L.ROUTE_DELETE_YES = "Borrar"
 	L.ROUTE_DELETE_CONFIRM = "¿Borrar la ruta «%s» y sus %d paradas?"
