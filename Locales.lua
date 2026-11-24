@@ -53,6 +53,13 @@ local L = {
 	ROUTE_CREATED = "Route created: %s",
 	ROUTE_RENAME = "Rename route",
 	ROUTE_RENAMED = "Route renamed: %s",
+	ROUTE_DELETE = "Delete route",
+	ROUTE_DELETE_YES = "Delete",
+	ROUTE_DELETE_CONFIRM = "Delete the route “%s” and its %d stops?",
+	ROUTE_DELETE_CONFIRM_ONE = "Delete the route “%s” and its stop?",
+	ROUTE_DELETE_CONFIRM_EMPTY = "Delete the route “%s”? It has no stops.",
+	ROUTE_DELETED = "Route deleted: %s",
+	ROUTE_LAST = "The last route can't be deleted.",
 	MANAGER_HINT = "Click: show on the map · Drag: reorder",
 
 	-- Importar una lista de /way
@@ -210,6 +217,13 @@ if locale == "esES" or locale == "esMX" then
 	L.ROUTE_CREATED = "Ruta creada: %s"
 	L.ROUTE_RENAME = "Renombrar ruta"
 	L.ROUTE_RENAMED = "Ruta renombrada: %s"
+	L.ROUTE_DELETE = "Borrar ruta"
+	L.ROUTE_DELETE_YES = "Borrar"
+	L.ROUTE_DELETE_CONFIRM = "¿Borrar la ruta «%s» y sus %d paradas?"
+	L.ROUTE_DELETE_CONFIRM_ONE = "¿Borrar la ruta «%s» y su parada?"
+	L.ROUTE_DELETE_CONFIRM_EMPTY = "¿Borrar la ruta «%s»? No tiene paradas."
+	L.ROUTE_DELETED = "Ruta borrada: %s"
+	L.ROUTE_LAST = "No se puede borrar la última ruta."
 	L.MANAGER_HINT = "Clic: ver en el mapa · Arrastrar: reordenar"
 
 	L.IMPORT_OPEN = "Importar lista /way"
