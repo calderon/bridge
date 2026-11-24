@@ -81,7 +81,7 @@ local L = {
 	UNITS_METERS = "Meters",
 	ARRIVED = "You have arrived at %s.",
 	NEXT_STOP = "Next stop: %s",
-	ROUTE_DONE = "That was the last stop.",
+	ROUTE_DONE = "Route completed.",
 	COMPASS_TIP = "Drag to move",
 	MENU_REMOVE = "Remove",
 	NAME_BOX_HINT = "Stop name (Enter: OK · Tab: next · Esc: cancel)",
@@ -227,7 +227,7 @@ if locale == "esES" or locale == "esMX" then
 	L.UNITS_METERS = "Metros"
 	L.ARRIVED = "Has llegado a %s."
 	L.NEXT_STOP = "Siguiente parada: %s"
-	L.ROUTE_DONE = "Era la última parada."
+	L.ROUTE_DONE = "Ruta completada."
 	L.COMPASS_TIP = "Arrastra para moverla"
 	L.MENU_REMOVE = "Quitar"
 	L.NAME_BOX_HINT = "Nombre de la parada (Intro: aceptar · Tab: siguiente · Esc: cancelar)"

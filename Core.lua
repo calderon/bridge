@@ -61,6 +61,22 @@ local function Stops()
 	return ActiveRoute().stops
 end
 
+-- Recorrido: al llegar a una parada se marca como alcanzada (st.reached) en vez de
+-- borrarla. La siguiente del recorrido es la primera que aún no se ha alcanzado.
+local function NextStopIndex(after)
+	local stops = Stops()
+	for i = (after or 0) + 1, #stops do
+		if not stops[i].reached then return i, stops[i] end
+	end
+end
+
+-- Como NextStopIndex, pero sin contar tu cadáver (para no poner nada delante de él)
+local function NextWaypointIndex()
+	for i, st in ipairs(Stops()) do
+		if not st.reached and not st.corpse then return i, st end
+	end
+end
+
 -- Datos de la 1.x (una sola lista, DB.stops): pasan a la ruta "Mi ruta", que queda activa
 local function MigrateData()
 	if not DB.routes then
@@ -114,6 +130,7 @@ local function PublicStop(s)
 	return {
 		id = s.id, index = index, name = s.name, zone = s.zone,
 		mapID = s.mapID, x = s.x, y = s.y, source = s.source, description = s.desc,
+		reached = s.reached and true or false,
 	}
 end
 
@@ -500,7 +517,8 @@ local function RebuildRoute()
 		rebuildPending = false
 		SendToGPS("/agps clear")
 		for _, other in ipairs(Stops()) do
-			if other.line then SendToGPS(other.line) end
+			-- Las ya alcanzadas no: AzerothGPS solo lleva lo que queda del recorrido
+			if other.line and not other.reached then SendToGPS(other.line) end
 		end
 	end)
 end
@@ -1692,7 +1710,7 @@ end
 local function CwayCommand()
 	local best, bestD
 	for i, st in ipairs(Stops()) do
-		if not st.corpse then
+		if not st.corpse and not st.reached then
 			local d = DistanceTo(st)
 			if d and (not bestD or d < bestD) then best, bestD = i, d end
 		end
@@ -1702,7 +1720,7 @@ local function CwayCommand()
 		return
 	end
 	local stop = Stops()[best]
-	local target = (Stops()[1] and Stops()[1].corpse) and 2 or 1
+	local target = NextWaypointIndex() or best
 	MoveStopTo(best, target)
 	Print(L.CWAY_DONE:format(stop.name or "?", FormatDistance(bestD)))
 end
@@ -2169,27 +2187,30 @@ local function HookArrivals()
 	pcall(api.OnArrive, ADDON, function(info)
 		if type(info) ~= "table" then return end
 		if info.last then
-			-- Tu cadáver no se quita al llegar, sino al resucitar
-			local last, corpse = Stops()[#Stops()], nil
-			for _, st in ipairs(Stops()) do if st.corpse then corpse = st end end
-			wipe(Stops())
-			if corpse then table.insert(Stops(), corpse) end
-			Fire("STOPS_CLEARED")
-			if last and not last.corpse and AnnounceArrival then AnnounceArrival(last, nil) end
+			-- Fin de su ruta: todas las que quedaban se dan por alcanzadas (siguen guardadas).
+			-- Tu cadáver no: se quita al resucitar.
+			local last
+			for _, st in ipairs(Stops()) do
+				if not st.reached and not st.corpse then
+					st.reached, last = true, st
+					Fire("STOP_REACHED", PublicStop(st))
+				end
+			end
+			if last and AnnounceArrival then AnnounceArrival(last, nil) end
 		elseif info.x and info.y then
 			local best, bestDist
 			for i, s in ipairs(Stops()) do
-				if s.wx and not s.corpse and (not info.cont or s.cont == info.cont) then
+				if s.wx and not s.corpse and not s.reached and (not info.cont or s.cont == info.cont) then
 					local d = (s.wx - info.x) ^ 2 + (s.wy - info.y) ^ 2
 					if not bestDist or d < bestDist then best, bestDist = i, d end
 				end
 			end
 			if best and bestDist < 60 * 60 then
 				local reached = Stops()[best]
-				local public = PublicStop(reached)
-				table.remove(Stops(), best)
-				Fire("STOP_REMOVED", public)
-				if AnnounceArrival then AnnounceArrival(reached, Stops()[best] or Stops()[1]) end
+				reached.reached = true
+				Fire("STOP_REACHED", PublicStop(reached))
+				local _, nextStop = NextStopIndex()
+				if AnnounceArrival then AnnounceArrival(reached, nextStop) end
 			end
 		end
 		RefreshPins()
@@ -2260,14 +2281,16 @@ function AnnounceArrival(s, nextStop)
 	PlaySound((SOUNDKIT and SOUNDKIT.MAP_PING) or 3175)
 end
 
+-- Llegada a una parada: queda guardada en su ruta, marcada como alcanzada, y el
+-- recorrido pasa a la siguiente
 local function ArriveAt(index)
 	local s = Stops()[index]
 	if not s then return end
-	local public = PublicStop(s)
-	table.remove(Stops(), index)
+	s.reached = true
 	RefreshPins()
-	AnnounceArrival(s, Stops()[index] or Stops()[1])
-	Fire("STOP_REMOVED", public)
+	local _, nextStop = NextStopIndex()
+	AnnounceArrival(s, nextStop)
+	Fire("STOP_REACHED", PublicStop(s))
 end
 
 -- Tiempo estimado de llegada: "1:23" o "1:05:30"
@@ -2311,17 +2334,17 @@ local function UpdateCompass(self, elapsed)
 	self.wait = (self.wait or 0) - elapsed
 	if self.wait > 0 then return end
 	self.wait = 0.05
-	local stop = Stops()[1]
+	local index, stop = NextStopIndex()
 	if not stop then self:Hide() return end
 	local eta = UpdateETA(self, stop, DistanceTo(stop))
 	self.ETA:SetText(eta and L.ETA:format(FormatETA(eta)) or "")
 	local count = #Stops()
-	self.Name:SetText(count > 1 and string.format("%s |cff999999(1/%d)|r", stop.name or "?", count) or (stop.name or "?"))
+	self.Name:SetText(count > 1 and string.format("%s |cff999999(%d/%d)|r", stop.name or "?", index, count) or (stop.name or "?"))
 	local d = DistanceTo(stop)
 	local bearing = BearingTo(stop)
 	local facing = GetPlayerFacing and GetPlayerFacing()
 	if d and d <= ARRIVE_YARDS and not HasGPS() and not stop.corpse then
-		ArriveAt(1)
+		ArriveAt(index)
 		return
 	end
 	if d and bearing and facing then
@@ -2391,10 +2414,10 @@ local function CreateCompass()
 	return compass
 end
 
--- Se muestra cuando está activada y hay paradas
+-- Se muestra cuando está activada y quedan paradas por alcanzar
 function UpdateCompassShown()
 	if not DB then return end
-	if DB.showCompass and #Stops() > 0 then
+	if DB.showCompass and NextStopIndex() then
 		CreateCompass().wait = 0
 		compass:Show()
 	elseif compass then
@@ -2669,7 +2692,7 @@ local API = { version = 1 }
 BridgeAPI = API
 
 -- Eventos que se pueden escuchar con RegisterCallback
-API.events = { "STOP_ADDED", "STOP_REMOVED", "STOP_CHANGED", "STOPS_REORDERED", "STOPS_CLEARED" }
+API.events = { "STOP_ADDED", "STOP_REMOVED", "STOP_CHANGED", "STOP_REACHED", "STOPS_REORDERED", "STOPS_CLEARED" }
 local KNOWN_EVENTS = {}
 for _, e in ipairs(API.events) do KNOWN_EVENTS[e] = true end
 
@@ -2884,7 +2907,7 @@ HandleSlash = function(cmd, arg)
 		for _ in pairs(hookedFrames) do hooked = hooked + 1 end
 		Print(L.DIAG_PINS:format(pins, hooked))
 		Print(L.DIAG_STOPS:format(#Stops(), DB.debug and L.YES or L.NO))
-		local first = Stops()[1]
+		local _, first = NextStopIndex()
 		local d = first and DistanceTo(first)
 		Print(L.DIAG_COMPASS:format(DB.showCompass and L.YES or L.NO,
 			(BridgeCompass and BridgeCompass:IsShown()) and L.YES or L.NO,
