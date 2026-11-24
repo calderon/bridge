@@ -44,6 +44,7 @@ Una ruta guardada devuelta por la API (versión 2) tiene estos campos:
 |---|---|
 | `id` | Identificador fijo (número, o texto en las rutas compartidas) |
 | `name` | Nombre |
+| `description` | Descripción, si tiene |
 | `count` | Número de paradas |
 | `shared` | `true` si la ven todos los personajes de la cuenta |
 | `loaded` | `true` si es la última cargada en la Ruta actual |
@@ -174,6 +175,7 @@ A saved route returned by the API (version 2) has these fields:
 |---|---|
 | `id` | Fixed identifier (a number, or text for shared routes) |
 | `name` | Name |
+| `description` | Description, if any |
 | `count` | Number of stops |
 | `shared` | `true` if all the characters of the account see it |
 | `loaded` | `true` if it is the last one loaded into the Current route |
