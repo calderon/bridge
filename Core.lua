@@ -72,7 +72,7 @@ local function PublicStop(s)
 	end
 	return {
 		id = s.id, index = index, name = s.name, zone = s.zone,
-		mapID = s.mapID, x = s.x, y = s.y, source = s.source,
+		mapID = s.mapID, x = s.x, y = s.y, source = s.source, description = s.desc,
 	}
 end
 
@@ -298,6 +298,13 @@ local function RefreshPins()
 	if managerFrame and managerFrame:IsShown() then managerFrame:Refresh() end
 end
 
+-- Limpia un nombre o una descripción: sin saltos de línea ni "|" (códigos de color); nil si queda vacío
+local function CleanName(name)
+	if type(name) ~= "string" then return nil end
+	name = name:gsub("[\r\n|]", " "):match("^%s*(.-)%s*$")
+	return name ~= "" and name or nil
+end
+
 -- Añade la parada ya con su nombre definitivo
 local function CommitStop(zMap, zx, zy, zoneName, name, exclusive, opts)
 	opts = opts or {}
@@ -312,6 +319,7 @@ local function CommitStop(zMap, zx, zy, zoneName, name, exclusive, opts)
 		local stop = {
 			id = NewStopId(), name = name, zone = zoneName, mapID = zMap, x = zx, y = zy,
 			cont = cont, wx = wx, wy = wy, line = line, source = opts.source,
+			desc = CleanName(opts.description),
 		}
 		table.insert(DB.stops, stop)
 		if not opts.silent then
@@ -326,22 +334,17 @@ local function CommitStop(zMap, zx, zy, zoneName, name, exclusive, opts)
 	end
 end
 
-local function CleanName(name)
-	if type(name) ~= "string" then return nil end
-	name = name:gsub("[\r\n|]", " "):match("^%s*(.-)%s*$")
-	return name ~= "" and name or nil
-end
-
 ---------------------------------------------------------------------------
 -- Caja para poner nombre a una parada nueva
 --   Intro: aceptar · Esc: cancelar (no se añade) · clic fuera: aceptar
 ---------------------------------------------------------------------------
 
 local nameBox
-local function AskName(suggestion, onAccept)
+-- onAccept(nombre, descripción): la descripción es opcional (nil si se deja vacía)
+local function AskName(suggestion, onAccept, description)
 	if not nameBox then
 		local f = CreateFrame("Frame", "BridgeNameFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
-		f:SetSize(230, 52)
+		f:SetSize(230, 90)
 		f:SetFrameStrata("FULLSCREEN_DIALOG")
 		f:SetToplevel(true)
 		f:EnableMouse(true)
@@ -362,24 +365,47 @@ local function AskName(suggestion, onAccept)
 		f:SetWidth(width)
 		local eb = CreateFrame("EditBox", nil, f, "InputBoxTemplate")
 		eb:SetSize(width - 26, 20)
-		eb:SetPoint("BOTTOMLEFT", 14, 6)
+		eb:SetPoint("TOPLEFT", 14, -22)
 		eb:SetAutoFocus(false)
 		eb:SetMaxLetters(60)
+		local descHint = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+		descHint:SetPoint("TOPLEFT", eb, "BOTTOMLEFT", -4, -8)
+		descHint:SetText(L.DESC_BOX_HINT)
+		local db = CreateFrame("EditBox", nil, f, "InputBoxTemplate")
+		db:SetSize(width - 26, 20)
+		db:SetPoint("TOPLEFT", descHint, "BOTTOMLEFT", 4, -3)
+		db:SetAutoFocus(false)
+		db:SetMaxLetters(200)
 		local function Close(accept)
 			if f.closing then return end
 			f.closing = true
-			local cb, text = f.onAccept, eb:GetText()
+			local cb, text, desc = f.onAccept, eb:GetText(), db:GetText()
 			f.onAccept = nil
 			eb:ClearFocus()
+			db:ClearFocus()
 			f:Hide()
 			f.closing = false
-			if accept and cb then cb(CleanName(text) or f.suggestion) end
+			if accept and cb then cb(CleanName(text) or f.suggestion, CleanName(desc)) end
 		end
-		eb:SetScript("OnEnterPressed", function() Close(true) end)
-		eb:SetScript("OnEscapePressed", function() Close(false) end)
-		-- Clic fuera de la caja: se acepta lo que haya escrito
-		eb:SetScript("OnEditFocusLost", function() if f:IsShown() then Close(true) end end)
-		f.Edit, f.Close = eb, Close
+		for _, box in ipairs({ eb, db }) do
+			box:SetScript("OnEnterPressed", function() Close(true) end)
+			box:SetScript("OnEscapePressed", function() Close(false) end)
+			-- Tab: pasar al otro campo
+			box:SetScript("OnTabPressed", function(self)
+				local other = self == eb and db or eb
+				other:SetFocus()
+				other:HighlightText()
+			end)
+			-- Clic fuera de la caja: se acepta lo que haya escrito. Se mira un instante
+			-- después, porque al pasar de un campo al otro uno pierde el foco antes de
+			-- que el otro lo gane.
+			box:SetScript("OnEditFocusLost", function()
+				C_Timer.After(0, function()
+					if f:IsShown() and not eb:HasFocus() and not db:HasFocus() then Close(true) end
+				end)
+			end)
+		end
+		f.Edit, f.Desc, f.Close = eb, db, Close
 		nameBox = f
 	end
 	-- Si había otra caja abierta, se acepta antes de abrir la nueva
@@ -391,6 +417,7 @@ local function AskName(suggestion, onAccept)
 	nameBox:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", cx / scale + 14, cy / scale + 10)
 	nameBox:SetClampedToScreen(true)
 	nameBox:Show()
+	nameBox.Desc:SetText(description or "")
 	nameBox.Edit:SetText(suggestion)
 	nameBox.Edit:SetFocus()
 	nameBox.Edit:HighlightText()
@@ -410,8 +437,11 @@ local function AddStop(mapID, x, y, name, exclusive, askName, opts)
 	-- Sin nombre (no es un icono): el de la zona. El número ya lo lleva el pin.
 	local suggestion = CleanName(name) or zoneName
 	if askName and DB.askName ~= false then
-		AskName(suggestion, function(finalName)
-			CommitStop(zMap, zx, zy, zoneName, finalName, exclusive, opts)
+		AskName(suggestion, function(finalName, description)
+			local withDesc = {}
+			for k, v in pairs(opts or {}) do withDesc[k] = v end
+			withDesc.description = description
+			CommitStop(zMap, zx, zy, zoneName, finalName, exclusive, withDesc)
 		end)
 	else
 		return CommitStop(zMap, zx, zy, zoneName, suggestion, exclusive, opts)
@@ -470,14 +500,21 @@ local function RemoveStopsWhere(match)
 	end
 end
 
-local function RenameStop(index, newName)
+-- Cambia el nombre y, si se pasa (aunque sea nil, para quitarla), la descripción
+local function RenameStop(index, newName, newDesc, setDesc)
 	local s = DB.stops[index]
-	if not s or not newName or newName == s.name then return end
-	s.name = newName
-	s.line = string.format("/way %s %.1f %.1f %s", s.zone, s.x * 100, s.y * 100, newName)
-	RebuildRoute() -- AzerothGPS necesita el nombre nuevo
+	if not s or not newName then return end
+	local nameChanged = newName ~= s.name
+	local descChanged = setDesc and newDesc ~= s.desc
+	if not nameChanged and not descChanged then return end
+	if descChanged then s.desc = newDesc end
+	if nameChanged then
+		s.name = newName
+		s.line = string.format("/way %s %.1f %.1f %s", s.zone, s.x * 100, s.y * 100, newName)
+		RebuildRoute() -- AzerothGPS necesita el nombre nuevo
+	end
 	RefreshPins()
-	Print(L.STOP_RENAMED:format(newName))
+	Print((nameChanged and L.STOP_RENAMED or L.STOP_EDITED):format(newName))
 	Fire("STOP_CHANGED", PublicStop(s))
 	return true
 end
@@ -1147,6 +1184,7 @@ function BridgePinMixin:FillTooltip()
 	if not stop then return end
 	GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
 	GameTooltip:SetText(stop.name or "?", 1, 0.82, 0)
+	if stop.desc then GameTooltip:AddLine(stop.desc, 0.9, 0.9, 0.9, true) end
 	local d = DistanceTo(stop)
 	if d then
 		GameTooltip:AddLine(FormatDistance(d), 1, 1, 1)
@@ -1562,12 +1600,12 @@ OpenStopMenu = function(pin)
 	ShowMenu(pin, {
 		{ text = s.name, title = true },
 		{ text = L.MENU_RENAME, func = function()
-			AskName(s.name, function(newName)
+			AskName(s.name, function(newName, newDesc)
 				-- Por si la lista cambió mientras escribías
 				for i, st in ipairs(DB.stops) do
-					if st == s then RenameStop(i, newName) return end
+					if st == s then RenameStop(i, newName, newDesc, true) return end
 				end
-			end)
+			end, s.desc)
 		end },
 		{ text = L.MENU_SHARE, sub = {
 			{ text = L.SHARE_PARTY, disabled = not inGroup, func = function() ShareStop(s, "PARTY") end },
@@ -1724,10 +1762,10 @@ local function CreateManagerRow(f, slot)
 	row.Remove:SetPoint("RIGHT", -2, 0)
 	row.Rename = IconButton(row, "Interface\\Buttons\\UI-GuildButton-PublicNote-Up", L.MENU_RENAME, function()
 		local stop = row.stop
-		AskName(stop.name, function(newName)
+		AskName(stop.name, function(newName, newDesc)
 			local i = IndexOf(stop)
-			if i then RenameStop(i, newName) end
-		end)
+			if i then RenameStop(i, newName, newDesc, true) end
+		end, stop.desc)
 	end)
 	row.Rename:SetPoint("RIGHT", row.Remove, "LEFT", -4, 0)
 
@@ -2367,6 +2405,7 @@ local function MiniPin(i)
 		if not st then return end
 		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
 		GameTooltip:SetText(st.name or "?", 1, 0.82, 0)
+		if st.desc then GameTooltip:AddLine(st.desc, 0.9, 0.9, 0.9, true) end
 		local d = DistanceTo(st)
 		if d then GameTooltip:AddLine(FormatDistance(d), 1, 1, 1) end
 		GameTooltip:Show()
@@ -2608,7 +2647,8 @@ local function ValidPoint(mapID, x, y)
 end
 
 -- Añade una parada. x, y entre 0 y 1 (como C_Map). opts (opcional):
---   name = "texto", exclusive = true (borra la ruta y deja solo esta),
+--   name = "texto", description = "texto" (sale en el tooltip),
+--   exclusive = true (borra la ruta y deja solo esta),
 --   source = "MiAddon", silent = true (no escribe en el chat).
 -- Devuelve el id de la parada, o nil si no se pudo añadir.
 function API.AddStop(mapID, x, y, opts)
