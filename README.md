@@ -8,7 +8,7 @@
 
 **Bridge** is a **waypoint** addon: you mark the places you want to go on the map, and Bridge points you towards them.
 
-Each place you mark is a **stop**: add it with a click, give it a name, and see it on the map and the minimap with its number. An optional on-screen arrow shows you which way to go and how far it is. When you get there, the stop is removed and the arrow moves on to the next one.
+Each place you mark is a **stop**: add it with a click, give it a name, and see it on the map and the minimap with its number. An optional on-screen arrow shows you which way to go and how far it is. When you get there, the arrow moves on to the next one; your stops stay saved.
 
 ### ✨ Features
 
@@ -66,14 +66,14 @@ It sits at the top right of the world map. Click it to open its menu:
 * **Clear stops** ▸ **In this zone** (the one shown on the map) or **All**.
 * **Units** ▸ **Yards** or **Meters**. Meters by default (yards if the game is in US English).
 * **Show compass** (off by default).
-* **Arrival notice** (on by default): the banner, the chat line and the sound. Turn it off to reach stops silently: they are still removed when you arrive.
+* **Arrival notice** (on by default): the banner, the chat line and the sound. Turn it off to reach stops silently: the route still advances.
 * **Ask for a name when adding** (on by default). The box also has an optional **Description** field (Tab to move to it); the description shows in the stop's tooltip on the map and the minimap. You can add or change it later with **Edit name and description**.
 
 To move the button: **Shift + drag** (`/bridge button reset` puts it back).
 
 #### Compass and arrival
 
-The compass points in a straight line to the next stop (number 1) and shows its name, how many are left, the distance and the estimated time of arrival (ETA), worked out from how fast you are getting closer; it is hidden while you are standing still or moving away. Drag it to move it. Within 10 yards, the stop is removed, the arrival notice shows up (if turned on) and the compass moves on to the next stop. The compass is what detects your arrival: if it is turned off, stops stay in place.
+The compass points in a straight line to the next stop (number 1) and shows its name, how many are left, the distance and the estimated time of arrival (ETA), worked out from how fast you are getting closer; it is hidden while you are standing still or moving away. Drag it to move it. Within 10 yards, the stop is marked as reached (it stays saved in its route), the arrival notice shows up (if turned on) and the compass moves on to the next stop. After the last one, the notice says the route is completed. The compass is what detects your arrival: if it is turned off, the route doesn't advance.
 
 #### Your corpse
 
@@ -150,7 +150,7 @@ Found a bug or have an idea? Leave a comment on the CurseForge project page. For
 
 **Bridge** es un addon de **puntos de ruta** (*waypoints*): marcas en el mapa los sitios a los que quieres ir y Bridge te señala hacia ellos.
 
-Cada sitio que marcas es una **parada**: la pones con un clic, le das un nombre y la ves en el mapa y en el minimapa con su número. Una flecha opcional en pantalla te indica hacia dónde ir y a qué distancia está. Al llegar, la parada se quita sola y la flecha pasa a la siguiente.
+Cada sitio que marcas es una **parada**: la pones con un clic, le das un nombre y la ves en el mapa y en el minimapa con su número. Una flecha opcional en pantalla te indica hacia dónde ir y a qué distancia está. Al llegar, la flecha pasa a la siguiente; tus paradas siguen guardadas.
 
 ### ✨ Funciones
 
@@ -208,14 +208,14 @@ Está arriba a la derecha del mapa del mundo. Haz clic para abrir su menú:
 * **Borrar paradas** ▸ **De la zona** (la que se ve en el mapa) o **Todas**.
 * **Unidades** ▸ **Yardas** o **Metros**. De entrada, metros (yardas si el juego está en inglés de EE. UU.).
 * **Mostrar brújula** (desactivada de entrada).
-* **Aviso al llegar** (activado de entrada): el cartel, la línea en el chat y el sonido. Desactívalo para llegar a las paradas sin avisos: se siguen quitando al llegar.
+* **Aviso al llegar** (activado de entrada): el cartel, la línea en el chat y el sonido. Desactívalo para llegar a las paradas sin avisos: la ruta sigue avanzando.
 * **Pedir nombre al añadir** (activado de entrada). La caja tiene además un campo opcional de **Descripción** (Tab para pasar a él); la descripción sale en el tooltip de la parada en el mapa y el minimapa. Puedes añadirla o cambiarla después con **Editar nombre y descripción**.
 
 Para mover el botón: **Mayús + arrastrar** (`/bridge button reset` lo devuelve a su sitio).
 
 #### Brújula y llegada
 
-La brújula apunta en línea recta a la siguiente parada (la número 1) y muestra su nombre, cuántas quedan, la distancia y el tiempo estimado de llegada, calculado según lo rápido que te acercas; no aparece si estás parado o te alejas. Arrástrala para moverla. Cuando estás a menos de 10 yardas, la parada se quita, sale el aviso (si está activado) y la brújula pasa a la siguiente. Es la brújula la que detecta la llegada: si está desactivada, las paradas se quedan puestas.
+La brújula apunta en línea recta a la siguiente parada (la número 1) y muestra su nombre, cuántas quedan, la distancia y el tiempo estimado de llegada, calculado según lo rápido que te acercas; no aparece si estás parado o te alejas. Arrástrala para moverla. Cuando estás a menos de 10 yardas, la parada queda marcada como alcanzada (sigue guardada en su ruta), sale el aviso (si está activado) y la brújula pasa a la siguiente. Tras la última, el aviso dice que la ruta está completada. Es la brújula la que detecta la llegada: si está desactivada, la ruta no avanza.
 
 #### Tu cadáver
 
