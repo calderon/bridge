@@ -22,7 +22,7 @@ local PIN_TEMPLATE = "BridgePinTemplate"
 
 -- La versión va aquí (y no solo en el .toc) porque el juego no relee el .toc con /reload.
 -- No cambiarla a mano: release-please la actualiza aquí y en Bridge.toc en cada versión.
-local VERSION = "1.1.0" -- x-release-please-version
+local VERSION = "1.2.0" -- x-release-please-version
 local PIN_TEXTURE = "Interface\\AddOns\\Bridge\\Media\\pin"
 local PIN_TEXTURE_HOVER = "Interface\\AddOns\\Bridge\\Media\\pin_hover"
 
