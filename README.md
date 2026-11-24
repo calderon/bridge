@@ -22,7 +22,7 @@ Each place you mark is a **stop**: add it with a click, give it a name, and see 
 * **Manage routes**: a window with your routes and their stops: search, reorder, rename and remove stops.
 * **Sharing**: send a stop to your party, raid or guild; players with Bridge can add it with one click.
 * **`/way` commands**: type coordinates in chat and they become stops.
-* **Import `/way` lists**: paste a list of `/way` lines from a guide or website and they all become stops, in order.
+* **Import stops**: paste a list of `/way` lines from a guide or website and they all become stops, in order.
 * **Yards or meters**, your choice.
 * **Stops are kept** between sessions.
 
@@ -70,7 +70,7 @@ It sits at the top right of the world map. Click it to open its menu:
   * **New route** (under the list) asks for a name and creates an empty route. Next to the route's name: + duplicates it (a copy with all its stops); on the Current route, ⟳ restarts it and ✕ empties it (after confirming); on a saved route, ✎ renames it and ✕ deletes it with its stops (after confirming).
   * The search box on top looks in route names and in the stops of every route (name, description and zone): the list shows the matching routes (e.g. (2/5): 2 of its 5 stops match), and matches are highlighted in gold.
   * Jump to a stop on the map (its pin flashes), edit its name and description, remove it, and reorder with ▲▼ or by dragging rows. To move a stop to another route, drag it onto that route in the list on the left, or right-click it and choose **Move to**. To copy it instead (the original stays), hold Shift when you drop it, or choose **Copy to**. The right-click menu also has **Edit name and description** and, at the end, **Remove**.
-  * The **Import /way list** button opens a box where you can paste many `/way` lines at once: each one becomes a stop, in order (with or without `/way` in front). Lines repeating a stop you already have are skipped, and you can tick a box to clear the route's stops first.
+  * The **Import stops** button opens a box where you can paste many `/way` lines at once: each one becomes a stop, in order (with or without `/way` in front). Lines repeating a stop you already have are skipped, and you can tick a box to clear the route's stops first.
 * **Empty Current route** (it asks first). Saved routes are never emptied from here, and your corpse stays.
 * **Units** ▸ **Yards** or **Meters**. Meters by default (yards if the game is in US English).
 * **Show compass** (off by default).
@@ -172,7 +172,7 @@ Cada sitio que marcas es una **parada**: la pones con un clic, le das un nombre 
 * **Gestionar rutas**: una ventana con tus rutas y sus paradas: buscar, ordenar, renombrar y quitar paradas.
 * **Compartir**: manda una parada a tu grupo, banda o hermandad; quien tenga Bridge puede añadirla con un clic.
 * **Comandos `/way`**: escribe coordenadas en el chat y se convierten en paradas.
-* **Importar listas de `/way`**: pega una lista de líneas `/way` de una guía o una web y todas se convierten en paradas, en orden.
+* **Importar paradas**: pega una lista de líneas `/way` de una guía o una web y todas se convierten en paradas, en orden.
 * **Yardas o metros**, a tu elección.
 * **Las paradas se guardan** entre sesiones.
 
@@ -220,7 +220,7 @@ Está arriba a la derecha del mapa del mundo. Haz clic para abrir su menú:
   * **Nueva ruta** (bajo la lista) pide un nombre y crea una ruta vacía. Junto al nombre de la ruta: + la duplica (una copia con todas sus paradas); en la Ruta actual, ⟳ la reinicia y ✕ la vacía (tras confirmarlo); en una ruta guardada, ✎ la renombra y ✕ la borra con sus paradas (tras confirmarlo).
   * El buscador de arriba mira en los nombres de las rutas y en las paradas de todas ellas (nombre, descripción y zona): la lista muestra las rutas que coinciden (p. ej. (2/5): coinciden 2 de sus 5 paradas) y las coincidencias se resaltan en dorado.
   * Puedes ir a una parada en el mapa (su pin parpadea), editar su nombre y descripción, quitarla y cambiar el orden con ▲▼ o arrastrando las filas. Para mover una parada a otra ruta, arrástrala sobre esa ruta en la lista de la izquierda, o haz clic derecho sobre ella y elige **Mover a**. Para copiarla (la original se queda), mantén pulsada Mayús al soltarla, o elige **Copiar a**. El menú del clic derecho tiene también **Editar nombre y descripción** y, al final, **Quitar**.
-  * El botón **Importar lista /way** abre un cuadro donde puedes pegar muchas líneas `/way` a la vez: cada una se convierte en una parada, en orden (con o sin `/way` delante). Las líneas que repiten una parada que ya tienes se saltan, y puedes marcar una casilla para borrar antes las paradas de la ruta.
+  * El botón **Importar paradas** abre un cuadro donde puedes pegar muchas líneas `/way` a la vez: cada una se convierte en una parada, en orden (con o sin `/way` delante). Las líneas que repiten una parada que ya tienes se saltan, y puedes marcar una casilla para borrar antes las paradas de la ruta.
 * **Vaciar Ruta actual** (pregunta antes). Desde aquí nunca se vacía una ruta guardada, y tu cadáver se queda.
 * **Unidades** ▸ **Yardas** o **Metros**. De entrada, metros (yardas si el juego está en inglés de EE. UU.).
 * **Mostrar brújula** (desactivada de entrada).

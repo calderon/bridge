@@ -85,8 +85,8 @@ local L = {
 	MENU_COPY_TO = "Copy to",
 
 	-- Importar una lista de /way
-	IMPORT_OPEN = "Import /way list",
-	IMPORT_TITLE_ROUTE = "Import /way list into “%s”",
+	IMPORT_OPEN = "Import stops",
+	IMPORT_TITLE_ROUTE = "Import stops into “%s”",
 	IMPORT_HINT = "Paste /way lines here, one per line. Each one becomes a stop, in order.",
 	IMPORT_CLEAR_FIRST = "Clear this route's stops before importing",
 	IMPORT_BUTTON = "Import",
@@ -185,7 +185,7 @@ local L = {
 	-- Ayuda (/bridge)
 	HELP_HEADER = "Version %s. Commands:",
 	HELP_MANAGE = "open the Manage routes window",
-	HELP_IMPORT = "paste a list of /way lines to add them as stops",
+	HELP_IMPORT = "import stops by pasting a list of /way lines",
 	HELP_CLEAR = "empty the Current route (and the AzerothGPS route, if installed); your corpse stays",
 	HELP_MARKERS = "show/hide the map markers",
 	HELP_SIZE = "marker size, 30 to 200 (%)",
@@ -278,8 +278,8 @@ if locale == "esES" or locale == "esMX" then
 	L.MENU_MOVE_TO = "Mover a"
 	L.MENU_COPY_TO = "Copiar a"
 
-	L.IMPORT_OPEN = "Importar lista /way"
-	L.IMPORT_TITLE_ROUTE = "Importar lista de /way en «%s»"
+	L.IMPORT_OPEN = "Importar paradas"
+	L.IMPORT_TITLE_ROUTE = "Importar paradas en «%s»"
 	L.IMPORT_HINT = "Pega aquí las líneas /way, una por línea. Cada una será una parada, en orden."
 	L.IMPORT_CLEAR_FIRST = "Borrar las paradas de esta ruta antes de importar"
 	L.IMPORT_BUTTON = "Importar"
@@ -374,7 +374,7 @@ if locale == "esES" or locale == "esMX" then
 
 	L.HELP_HEADER = "Versión %s. Comandos:"
 	L.HELP_MANAGE = "abrir la ventana Gestionar rutas"
-	L.HELP_IMPORT = "pegar una lista de líneas /way para añadirlas como paradas"
+	L.HELP_IMPORT = "importar paradas pegando una lista de líneas /way"
 	L.HELP_CLEAR = "vaciar la Ruta actual (y la ruta de AzerothGPS, si lo tienes); tu cadáver se queda"
 	L.HELP_MARKERS = "mostrar/ocultar los marcadores del mapa"
 	L.HELP_SIZE = "tamaño de los marcadores, de 30 a 200 (%)"
