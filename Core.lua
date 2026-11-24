@@ -558,8 +558,10 @@ local function CommitStop(zMap, zx, zy, zoneName, name, exclusive, opts)
 		}
 		table.insert(StopsOf(opts.route), stop)
 		if not opts.silent then
-			Print(string.format("%s: |cffffd100%s|r (%s %.1f, %.1f)",
-				exclusive and L.DIRECT_ROUTE or L.STOP_ADDED, name, zoneName, zx * 100, zy * 100))
+			local what = exclusive and L.DIRECT_ROUTE
+				or (not active and L.STOP_ADDED_TO:format(opts.route.name or "?"))
+				or L.STOP_ADDED
+			Print(string.format("%s: |cffffd100%s|r (%s %.1f, %.1f)", what, name, zoneName, zx * 100, zy * 100))
 		end
 		RefreshPins()
 		if active then Fire("STOP_ADDED", PublicStop(stop)) end
@@ -1813,6 +1815,15 @@ local function StopUnderCursor(map, cx, cy)
 	end
 end
 
+-- A dónde va una parada que pones tú (Alt+clic, Importar): a la ruta elegida en Gestionar
+-- rutas si la ventana está abierta; si no, a la Ruta actual. "Ir solo ahí" vacía la ruta,
+-- así que va siempre a la Ruta actual (nunca vacía una ruta guardada).
+local function TargetRoute(exclusive)
+	if exclusive or not (managerFrame and managerFrame:IsShown() and managerFrame.Route) then return nil end
+	local route = managerFrame:Route()
+	if route and not route.quick then return route end
+end
+
 local function CanvasClick(canvas, button)
 	if button ~= "LeftButton" or IsControlKeyDown() or not WantsStop() then
 		return false -- Ctrl+clic se deja para el pin de Blizzard
@@ -1823,7 +1834,8 @@ local function CanvasClick(canvas, button)
 		RemoveStop(near)
 		return true
 	end
-	AddStop(canvas:GetMapID(), x, y, nil, IsShiftKeyDown(), true)
+	local exclusive = IsShiftKeyDown()
+	AddStop(canvas:GetMapID(), x, y, nil, exclusive, true, { route = TargetRoute(exclusive) })
 	return true -- consumimos el clic para que el mapa no cambie de zona
 end
 
@@ -1907,7 +1919,8 @@ local function PinMouseUp(frame, button)
 	if DB and DB.debug then
 		Print(L.DEBUG_ICON_CLICK:format(tostring(name), x * 100, y * 100))
 	end
-	AddStop(map:GetMapID(), x, y, name, IsShiftKeyDown(), true)
+	local exclusive = IsShiftKeyDown()
+	AddStop(map:GetMapID(), x, y, name, exclusive, true, { route = TargetRoute(exclusive) })
 end
 
 local hookedFrames = setmetatable({}, { __mode = "k" })
@@ -3797,7 +3810,7 @@ HandleSlash = function(cmd, arg)
 	elseif cmd == "manage" then
 		ToggleManager()
 	elseif cmd == "import" then
-		ShowImport()
+		ShowImport(TargetRoute(false))
 	elseif cmd == "version" then
 		Print(L.VERSION:format(VERSION))
 	elseif cmd == "size" then

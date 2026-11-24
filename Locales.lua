@@ -15,6 +15,7 @@ local L = {
 
 	-- Paradas
 	STOP_ADDED = "Stop added",
+	STOP_ADDED_TO = "Stop added to “%s”",
 	DIRECT_ROUTE = "Direct route to",
 	STOP_MOVED = "Stop moved",
 	STOP_MOVED_TO = "Stop moved: %s → %s",
@@ -208,6 +209,7 @@ if locale == "esES" or locale == "esMX" then
 	L.NO = "no"
 
 	L.STOP_ADDED = "Parada añadida"
+	L.STOP_ADDED_TO = "Parada añadida a «%s»"
 	L.DIRECT_ROUTE = "Ruta directa a"
 	L.STOP_MOVED = "Parada movida"
 	L.STOP_MOVED_TO = "Parada movida: %s → %s"
