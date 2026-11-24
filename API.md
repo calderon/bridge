@@ -34,6 +34,7 @@ Una parada devuelta por la API tiene estos campos:
 | `mapID`, `x`, `y` | Zona y coordenadas (0–1) |
 | `source` | Quién la añadió, si se indicó (`"Questie"`, `"/way"`, el nombre de tu addon…) |
 | `description` | Descripción, si tiene (sale en el tooltip) |
+| `reached` | `true` si ya se ha llegado a ella en el recorrido (sigue guardada en su ruta) |
 
 ### Funciones
 
@@ -75,6 +76,7 @@ Las paradas añadidas por la API **nunca** muestran la cajita para poner nombre.
 | `STOP_ADDED` | Se añade una parada | La nueva |
 | `STOP_REMOVED` | Se quita una parada | La quitada (`index` ya no aplica) |
 | `STOP_CHANGED` | Se renombra, cambia su descripción o se mueve | Con los datos nuevos |
+| `STOP_REACHED` | Se llega a una parada (no se quita: queda marcada como alcanzada) | La alcanzada (`reached = true`) |
 | `STOPS_REORDERED` | Cambia el orden | — |
 | `STOPS_CLEARED` | Se borran todas | — |
 
@@ -136,6 +138,7 @@ A stop returned by the API has these fields:
 | `mapID`, `x`, `y` | Zone and coordinates (0–1) |
 | `source` | Who added it, if given (`"Questie"`, `"/way"`, your addon's name…) |
 | `description` | Description, if any (shown in the tooltip) |
+| `reached` | `true` if it has already been reached in the current walk (it stays saved in its route) |
 
 ### Functions
 
@@ -177,6 +180,7 @@ Stops added through the API **never** show the naming box.
 | `STOP_ADDED` | A stop is added | The new one |
 | `STOP_REMOVED` | A stop is removed | The removed one (`index` no longer applies) |
 | `STOP_CHANGED` | A stop is renamed, its description changes, or it is moved | With the new data |
+| `STOP_REACHED` | A stop is reached (it is not removed: it is marked as reached) | The reached one (`reached = true`) |
 | `STOPS_REORDERED` | The order changes | — |
 | `STOPS_CLEARED` | All stops are cleared | — |
 
