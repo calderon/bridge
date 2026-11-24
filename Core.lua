@@ -914,6 +914,18 @@ local function CurrentStopCount()
 	return n
 end
 
+-- Vaciar la Ruta actual (botón Bridge y Gestionar rutas): pregunta antes si tiene paradas.
+-- Tu cadáver se queda. 'after' se llama al terminar (p. ej. para refrescar la ventana).
+local function ConfirmClearCurrent(anchor, after)
+	local n = CurrentStopCount()
+	if n == 0 then return end
+	local text = L.CLEAR_CONFIRM .. "\n" .. (n == 1 and L.CLEAR_STOPS_ONE or L.CLEAR_STOPS:format(n))
+	Confirm(text, L.CLEAR_YES, function()
+		ClearStops()
+		if after then after() end
+	end, anchor)
+end
+
 -- Copia de una ruta con todas sus paradas ("<nombre> (copia)"), sin activar.
 -- Las paradas copiadas son nuevas (otro id) y empiezan sin alcanzar; tu cadáver no se copia.
 local function DuplicateRoute(route)
@@ -2633,6 +2645,11 @@ local function CreateManager()
 	end)
 	f.RestartRoute:SetPoint("LEFT", f.DuplicateRoute, "RIGHT", 4, 0)
 
+	-- Vaciar la Ruta actual (pregunta antes; tu cadáver se queda)
+	f.ClearRoute = IconButton(f, "Interface\\Buttons\\UI-GroupLoot-Pass-Up", L.MENU_CLEAR_STOPS, function(self)
+		ConfirmClearCurrent(self, function() f:Refresh() end)
+	end)
+
 	-- Y borrarla (con confirmación; nunca la última)
 	f.DeleteRoute = IconButton(f, "Interface\\Buttons\\UI-GroupLoot-Pass-Up", L.ROUTE_DELETE, function(self)
 		local route = f:Route()
@@ -2852,8 +2869,10 @@ local function CreateManager()
 		self.RestartRoute:SetShown(not nothing and current)
 		SetButtonEnabled(self.RestartRoute, HasReached(route))
 		self.DeleteRoute:SetShown(not nothing and not current)
+		self.ClearRoute:SetShown(not nothing and current)
+		SetButtonEnabled(self.ClearRoute, CurrentStopCount() > 0)
 		local previous
-		for _, icon in ipairs({ self.RenameRoute, self.DuplicateRoute, self.RestartRoute, self.DeleteRoute }) do
+		for _, icon in ipairs({ self.RenameRoute, self.DuplicateRoute, self.RestartRoute, self.ClearRoute, self.DeleteRoute }) do
 			if icon:IsShown() then
 				icon:ClearAllPoints()
 				if previous then
@@ -3040,14 +3059,7 @@ local function CreateMapButton()
 			{ text = "Bridge", title = true },
 			{ text = routeMode and L.MENU_ROUTE_MODE_OFF or L.MENU_ROUTE_MODE_ON, func = function() SetRouteMode(not routeMode) end },
 			{ text = L.MENU_MANAGE, func = function() ToggleManager() end },
-			{ text = L.MENU_CLEAR_STOPS, sub = {
-				{ text = L.MENU_CLEAR_ZONE, func = function()
-					-- Las de la zona que se está viendo en el mapa
-					local mapID = WorldMapFrame:GetMapID()
-					RemoveStopsWhere(function(st) return st.mapID == mapID end)
-				end },
-				{ text = L.MENU_CLEAR_ALL, func = function() ClearStops() end },
-			} },
+			{ text = L.MENU_CLEAR_STOPS, disabled = CurrentStopCount() == 0, func = function() ConfirmClearCurrent(button) end },
 			{ text = L.MENU_UNITS, sub = {
 				{ text = L.UNITS_YARDS, check = true,
 					checked = function() return Units() == "yd" end,
