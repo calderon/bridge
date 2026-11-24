@@ -43,6 +43,16 @@ local L = {
 	MENU_MANAGE = "Manage stops…",
 	MANAGER_TITLE = "Manage stops",
 	MANAGER_HINT = "Click: show on the map · Drag: reorder",
+
+	-- Importar una lista de /way
+	IMPORT_OPEN = "Import /way list",
+	IMPORT_TITLE = "Import /way list",
+	IMPORT_HINT = "Paste /way lines here, one per line. Each one becomes a stop, in order.",
+	IMPORT_CLEAR_FIRST = "Clear current stops before importing",
+	IMPORT_BUTTON = "Import",
+	IMPORT_ADDED = "Import: %d stops added",
+	IMPORT_REPEATED = "%d repeated",
+	IMPORT_BAD = "%d lines not understood",
 	MANAGER_FILTERING = "Clear the search to reorder.",
 	MANAGER_EMPTY = "No stops yet. Alt+click on the map to add one.",
 	MANAGER_NO_MATCH = "No stops match the search.",
@@ -126,6 +136,7 @@ local L = {
 	-- Ayuda (/bridge)
 	HELP_HEADER = "Version %s. Commands:",
 	HELP_MANAGE = "open the Manage stops window",
+	HELP_IMPORT = "paste a list of /way lines to add them as stops",
 	HELP_CLEAR = "clear all stops (and the AzerothGPS route, if installed)",
 	HELP_MARKERS = "show/hide the map markers",
 	HELP_SIZE = "marker size, 30 to 200 (%)",
@@ -139,7 +150,7 @@ local L = {
 -- Palabras de los comandos: siempre en inglés, en todos los idiomas.
 local W = {
 	clear = "clear", markers = "markers", size = "size", button = "button", reset = "reset",
-	version = "version", copy = "copy", manage = "manage",
+	version = "version", copy = "copy", manage = "manage", import = "import",
 }
 
 local locale = GetLocale()
@@ -177,6 +188,15 @@ if locale == "esES" or locale == "esMX" then
 	L.MENU_MANAGE = "Gestionar paradas…"
 	L.MANAGER_TITLE = "Gestionar paradas"
 	L.MANAGER_HINT = "Clic: ver en el mapa · Arrastrar: reordenar"
+
+	L.IMPORT_OPEN = "Importar lista /way"
+	L.IMPORT_TITLE = "Importar lista de /way"
+	L.IMPORT_HINT = "Pega aquí las líneas /way, una por línea. Cada una será una parada, en orden."
+	L.IMPORT_CLEAR_FIRST = "Borrar las paradas actuales antes de importar"
+	L.IMPORT_BUTTON = "Importar"
+	L.IMPORT_ADDED = "Importar: %d paradas añadidas"
+	L.IMPORT_REPEATED = "%d repetidas"
+	L.IMPORT_BAD = "%d líneas no entendidas"
 	L.MANAGER_FILTERING = "Borra la búsqueda para reordenar."
 	L.MANAGER_EMPTY = "Aún no hay paradas. Alt+clic en el mapa para añadir una."
 	L.MANAGER_NO_MATCH = "Ninguna parada coincide con la búsqueda."
@@ -256,6 +276,7 @@ if locale == "esES" or locale == "esMX" then
 
 	L.HELP_HEADER = "Versión %s. Comandos:"
 	L.HELP_MANAGE = "abrir la ventana Gestionar paradas"
+	L.HELP_IMPORT = "pegar una lista de líneas /way para añadirlas como paradas"
 	L.HELP_CLEAR = "borrar todas las paradas (y la ruta de AzerothGPS, si lo tienes)"
 	L.HELP_MARKERS = "mostrar/ocultar los marcadores del mapa"
 	L.HELP_SIZE = "tamaño de los marcadores, de 30 a 200 (%)"

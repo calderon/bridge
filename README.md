@@ -21,6 +21,7 @@ Each place you mark is a **stop**: add it with a click, give it a name, and see 
 * **Manage stops**: a window to search, reorder, rename and remove stops.
 * **Sharing**: send a stop to your party, raid or guild; players with Bridge can add it with one click.
 * **`/way` commands**: type coordinates in chat and they become stops.
+* **Import `/way` lists**: paste a list of `/way` lines from a guide or website and they all become stops, in order.
 * **Yards or meters**, your choice.
 * **Stops are kept** between sessions (optional).
 
@@ -60,7 +61,7 @@ When you add a stop, a small box shows a suggested name: **Enter** accepts it (o
 It sits at the top right of the world map. Click it to open its menu:
 
 * **Turn on route mode**: while it is on (the button glows green), a plain click adds stops. It turns off when you close the map.
-* **Manage stops…**: a window with all your stops. Search by name or zone, jump to one on the map (its pin flashes), rename it, remove it, and reorder with ▲▼ or by dragging rows.
+* **Manage stops…**: a window with all your stops. Search by name or zone, jump to one on the map (its pin flashes), rename it, remove it, and reorder with ▲▼ or by dragging rows. The **Import /way list** button opens a box where you can paste many `/way` lines at once: each one becomes a stop, in order (with or without `/way` in front). Lines repeating a stop you already have are skipped, and you can tick a box to clear your current stops first.
 * **Clear stops** ▸ **In this zone** (the one shown on the map) or **All**.
 * **Units** ▸ **Yards** or **Meters**. Meters by default (yards if the game is in US English).
 * **Show compass** (off by default).
@@ -88,6 +89,7 @@ Almost everything is done from the map and the button.
 |---|---|
 | `/bridge` | Help. |
 | `/bridge manage` | Open the "Manage stops" window. |
+| `/bridge import` | Paste a list of `/way` lines to add them as stops. |
 | `/bridge clear` | Clear all stops. |
 | `/bridge markers` | Show or hide the markers (map and minimap). |
 | `/bridge size N` | Marker size, 30 to 200 (%). |
@@ -161,6 +163,7 @@ Cada sitio que marcas es una **parada**: la pones con un clic, le das un nombre 
 * **Gestionar paradas**: una ventana para buscar, ordenar, renombrar y quitar paradas.
 * **Compartir**: manda una parada a tu grupo, banda o hermandad; quien tenga Bridge puede añadirla con un clic.
 * **Comandos `/way`**: escribe coordenadas en el chat y se convierten en paradas.
+* **Importar listas de `/way`**: pega una lista de líneas `/way` de una guía o una web y todas se convierten en paradas, en orden.
 * **Yardas o metros**, a tu elección.
 * **Las paradas se guardan** entre sesiones (opcional).
 
@@ -200,7 +203,7 @@ Al añadir una parada sale una cajita con un nombre propuesto: **Intro** acepta 
 Está arriba a la derecha del mapa del mundo. Haz clic para abrir su menú:
 
 * **Activar modo ruta**: mientras está activo (el botón brilla en verde), basta un clic normal para añadir paradas. Se desactiva al cerrar el mapa.
-* **Gestionar paradas…**: ventana con todas tus paradas. Puedes buscarlas por nombre o zona, ir a una en el mapa (su pin parpadea), renombrarla, quitarla y cambiar el orden con ▲▼ o arrastrando las filas.
+* **Gestionar paradas…**: ventana con todas tus paradas. Puedes buscarlas por nombre o zona, ir a una en el mapa (su pin parpadea), renombrarla, quitarla y cambiar el orden con ▲▼ o arrastrando las filas. El botón **Importar lista /way** abre un cuadro donde puedes pegar muchas líneas `/way` a la vez: cada una se convierte en una parada, en orden (con o sin `/way` delante). Las líneas que repiten una parada que ya tienes se saltan, y puedes marcar una casilla para borrar antes tus paradas actuales.
 * **Borrar paradas** ▸ **De la zona** (la que se ve en el mapa) o **Todas**.
 * **Unidades** ▸ **Yardas** o **Metros**. De entrada, metros (yardas si el juego está en inglés de EE. UU.).
 * **Mostrar brújula** (desactivada de entrada).
@@ -228,6 +231,7 @@ Casi todo se hace desde el mapa y el botón. Los comandos se escriben siempre en
 |---|---|
 | `/bridge` | Ayuda. |
 | `/bridge manage` | Abrir la ventana "Gestionar paradas". |
+| `/bridge import` | Pegar una lista de líneas `/way` para añadirlas como paradas. |
 | `/bridge clear` | Borrar todas las paradas. |
 | `/bridge markers` | Mostrar u ocultar los marcadores (mapa y minimapa). |
 | `/bridge size N` | Tamaño de los marcadores, de 30 a 200 (%). |
