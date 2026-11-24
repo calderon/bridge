@@ -738,6 +738,33 @@ local function DuplicateRoute(route)
 	return copy
 end
 
+-- Mover una parada a otra ruta (al final de esa ruta). Tu cadáver no se mueve.
+-- Si sale de la ruta activa, AzerothGPS la pierde; si entra en la activa, la recibe.
+local function MoveStopToRoute(stop, from, to)
+	if not (stop and from and to) or from == to or stop.corpse then return end
+	local index
+	for i, st in ipairs(from.stops) do
+		if st == stop then index = i break end
+	end
+	if not index then return end
+	local fromActive, toActive = IsActiveRoute(from), IsActiveRoute(to)
+	local public = fromActive and PublicStop(stop)
+	table.remove(from.stops, index)
+	stop.reached = nil -- en la otra ruta empieza sin alcanzar
+	table.insert(to.stops, stop)
+	if fromActive then
+		RebuildRoute()
+		Fire("STOP_REMOVED", public)
+	end
+	if toActive then
+		if stop.line then SendToGPS(stop.line) end
+		Fire("STOP_ADDED", PublicStop(stop))
+	end
+	RefreshPins()
+	Print(L.STOP_MOVED_TO:format(stop.name or "?", to.name or "?"))
+	return true
+end
+
 -- Borrar una ruta con sus paradas. Nunca la última. Si era la activa, se activa otra
 -- (ActivateRoute se lleva también tu cadáver, si lo hay).
 local function DeleteRoute(route)
@@ -1780,7 +1807,16 @@ local function TrackMenu(menu)
 end
 
 -- anchor: función que coloca el menú (por defecto, bajo el botón y alineado a la derecha)
-local function ShowMenu(owner, items, anchor)
+-- onTop: true si se abre desde una ventana de Bridge (Gestionar rutas): esas ventanas están
+-- en la capa más alta y el menú (y sus submenús) quedaría debajo; se sube a la capa de
+-- los tooltips cada vez que el juego monta un nivel del menú.
+local function RaiseMenuOf(frame)
+	local top = frame
+	while top:GetParent() and top:GetParent() ~= UIParent do top = top:GetParent() end
+	if top.SetFrameStrata then top:SetFrameStrata("TOOLTIP") end
+end
+
+local function ShowMenu(owner, items, anchor, onTop)
 	if MenuUtil and MenuUtil.CreateContextMenu then
 		local menu = MenuUtil.CreateContextMenu(owner, function(_, root)
 			local function build(desc, list)
@@ -1792,6 +1828,7 @@ local function ShowMenu(owner, items, anchor)
 					else
 						-- En los submenús, el menú moderno pega el texto al borde: le damos margen
 						local b = desc:CreateButton((desc ~= root and "  " or "") .. it.text, it.func)
+						if onTop and b.AddInitializer then b:AddInitializer(function(frame) RaiseMenuOf(frame) end) end
 						if it.sub then build(b, it.sub) end
 						if it.disabled and b.SetEnabled then b:SetEnabled(false) end
 					end
@@ -1804,6 +1841,7 @@ local function ShowMenu(owner, items, anchor)
 			menu:ClearAllPoints()
 			if anchor then anchor(menu) else menu:SetPoint("TOPRIGHT", owner, "BOTTOMRIGHT", 0, -2) end
 		end
+		if onTop and menu and menu.SetFrameStrata then menu:SetFrameStrata("TOOLTIP") end
 		TrackMenu(menu)
 		return
 	end
@@ -1832,6 +1870,12 @@ local function ShowMenu(owner, items, anchor)
 	end, "MENU")
 	-- Siempre bajo el botón, alineado por la derecha
 	ToggleDropDownMenu(1, nil, dropdown, owner, owner:GetWidth() - 160, 0)
+	if onTop then
+		for level = 1, (UIDROPDOWNMENU_MAXLEVELS or 3) do
+			local list = _G["DropDownList" .. level]
+			if list then list:SetFrameStrata("TOOLTIP") end
+		end
+	end
 	TrackMenu(DropDownList1)
 end
 
@@ -1977,7 +2021,7 @@ local function CreateManagerRow(f, slot)
 	row:SetHeight(ROW_HEIGHT)
 	row:SetPoint("TOPLEFT", f.Content, "TOPLEFT", 0, -(slot - 1) * ROW_HEIGHT)
 	row:SetPoint("RIGHT", f.Content, "RIGHT", 0, 0)
-	row:RegisterForClicks("LeftButtonUp")
+	row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 	row:RegisterForDrag("LeftButton")
 
 	local hl = row:CreateTexture(nil, "HIGHLIGHT")
@@ -2033,9 +2077,24 @@ local function CreateManagerRow(f, slot)
 	row.Zone:SetJustifyH("LEFT")
 	row.Zone:SetWordWrap(false)
 
-	-- Clic: ir a la parada en el mapa
-	row:SetScript("OnClick", function(self)
+	-- Clic: ir a la parada en el mapa. Clic derecho: menú (mover a otra ruta)
+	row:SetScript("OnClick", function(self, mouseButton)
 		if self.wasDragged then self.wasDragged = false return end
+		if mouseButton == "RightButton" then
+			-- Menú contextual: "Mover a ▸" con las demás rutas
+			local stop, from, targets = self.stop, f:Route(), {}
+			for _, route in ipairs(DB.routes) do
+				if route ~= from then
+					table.insert(targets, { text = route.name or "?", func = function()
+						MoveStopToRoute(stop, from, route)
+					end })
+				end
+			end
+			ShowMenu(self, {
+				{ text = L.MENU_MOVE_TO, sub = targets, disabled = #targets == 0 or stop.corpse },
+			}, function(menu) menu:SetPoint("TOPLEFT", self, "BOTTOMLEFT", 40, 4) end, true)
+			return
+		end
 		NavigateToStop(self.stop)
 	end)
 
@@ -2053,6 +2112,14 @@ local function CreateManagerRow(f, slot)
 		self:SetAlpha(1)
 		f.DropLine:Hide()
 		f.dragRow = nil
+		local dropRoute = f.dropRoute
+		f.dropRoute = nil
+		for _, r in ipairs(f.routeRows) do r.DropTarget:Hide() end
+		if dropRoute then
+			f.dropIndex = nil
+			MoveStopToRoute(self.stop, f:Route(), dropRoute)
+			return
+		end
 		local from, target = self.index, f.dropIndex
 		f.dropIndex = nil
 		if from and target then
@@ -2077,6 +2144,11 @@ local function CreateRouteRow(f, slot)
 	row.Selected = row:CreateTexture(nil, "BACKGROUND")
 	row.Selected:SetAllPoints()
 	row.Selected:SetColorTexture(0.25, 0.45, 0.85, 0.35)
+	-- Al arrastrar una parada encima: se moverá a esta ruta
+	row.DropTarget = row:CreateTexture(nil, "BORDER")
+	row.DropTarget:SetAllPoints()
+	row.DropTarget:SetColorTexture(0.2, 1, 0.2, 0.3)
+	row.DropTarget:Hide()
 	local hl = row:CreateTexture(nil, "HIGHLIGHT")
 	hl:SetAllPoints()
 	hl:SetColorTexture(1, 1, 1, 0.08)
@@ -2304,6 +2376,15 @@ local function CreateManager()
 		f.DropLine:ClearAllPoints()
 		f.DropLine:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -slot * ROW_HEIGHT + 1)
 		f.DropLine:SetPoint("RIGHT", content, "RIGHT", 0, 0)
+		-- ¿Encima de otra ruta de la lista? Entonces se moverá allí (no se reordena)
+		local over
+		for _, r in ipairs(f.routeRows) do
+			local hit = r:IsShown() and r.route ~= f:Route() and r:IsMouseOver()
+			r.DropTarget:SetShown(hit)
+			if hit then over = r.route end
+		end
+		f.dropRoute = over
+		f.DropLine:SetShown(not over)
 	end
 
 	-- La barra de desplazamiento solo cuando la lista no cabe
