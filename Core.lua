@@ -509,6 +509,61 @@ local function AskName(suggestion, onAccept, description, opts)
 	nameBox.Edit:HighlightText()
 end
 
+---------------------------------------------------------------------------
+-- Confirmación pequeña (p. ej. borrar una ruta), encima de lo que la abre
+---------------------------------------------------------------------------
+
+local confirmBox
+local function Confirm(text, yesText, onYes, anchor)
+	if not confirmBox then
+		local f = CreateFrame("Frame", "BridgeConfirmFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+		f:SetSize(280, 80)
+		f:SetFrameStrata("FULLSCREEN_DIALOG")
+		f:SetToplevel(true)
+		f:EnableMouse(true)
+		f:SetClampedToScreen(true)
+		if f.SetBackdrop then
+			f:SetBackdrop({
+				bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+				edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+				tile = true, tileSize = 16, edgeSize = 14,
+				insets = { left = 3, right = 3, top = 3, bottom = 3 },
+			})
+			f:SetBackdropColor(0, 0, 0, 0.95)
+		end
+		f.Text = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+		f.Text:SetPoint("TOPLEFT", 12, -12)
+		f.Text:SetPoint("TOPRIGHT", -12, -12)
+		f.Text:SetJustifyH("LEFT")
+		f.Text:SetWordWrap(true)
+		f.No = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+		f.No:SetSize(100, 22)
+		f.No:SetPoint("BOTTOMRIGHT", -10, 10)
+		f.No:SetText(CANCEL or "Cancel")
+		f.No:SetScript("OnClick", function() f:Hide() end)
+		f.Yes = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+		f.Yes:SetSize(100, 22)
+		f.Yes:SetPoint("RIGHT", f.No, "LEFT", -6, 0)
+		f.Yes:SetScript("OnClick", function()
+			local cb = f.onYes
+			f.onYes = nil
+			f:Hide()
+			if cb then cb() end
+		end)
+		f:Hide()
+		confirmBox = f
+	end
+	local f = confirmBox
+	f.onYes = onYes
+	f.Text:SetText(text)
+	f.Yes:SetText(yesText)
+	f:SetHeight(math.ceil(f.Text:GetStringHeight()) + 52)
+	f:ClearAllPoints()
+	f:SetPoint("BOTTOMLEFT", anchor, "TOPLEFT", -4, 4)
+	f:Show()
+	f:Raise()
+end
+
 -- askName: true cuando la parada la pone el jugador en el mapa (Alt+clic)
 -- opts (opcional): { source = "quién la añade", silent = true para no escribir en el chat }
 -- Devuelve la parada creada (salvo si se pide el nombre: entonces se crea al aceptar).
@@ -664,6 +719,27 @@ local function ActivateRoute(route)
 	RefreshPins()
 	Print(L.ROUTE_ACTIVATED:format(route.name or "?"))
 	Fire("ACTIVE_ROUTE_CHANGED", { id = route.id, name = route.name })
+end
+
+-- Borrar una ruta con sus paradas. Nunca la última. Si era la activa, se activa otra
+-- (ActivateRoute se lleva también tu cadáver, si lo hay).
+local function DeleteRoute(route)
+	if not route then return end
+	if #DB.routes <= 1 then
+		Print(L.ROUTE_LAST)
+		return
+	end
+	if IsActiveRoute(route) then
+		for _, other in ipairs(DB.routes) do
+			if other ~= route then ActivateRoute(other) break end
+		end
+	end
+	for i, other in ipairs(DB.routes) do
+		if other == route then table.remove(DB.routes, i) break end
+	end
+	RefreshPins()
+	Print(L.ROUTE_DELETED:format(route.name or "?"))
+	return true
 end
 
 -- Enlace de mapa de Blizzard para una parada (lo que se ve como "Punto del mapa" en el chat)
@@ -2134,6 +2210,22 @@ local function CreateManager()
 	end)
 	f.RenameRoute:SetPoint("LEFT", f.RouteName, "RIGHT", 6, 0)
 
+	-- Y borrarla (con confirmación; nunca la última)
+	f.DeleteRoute = IconButton(f, "Interface\\Buttons\\UI-GroupLoot-Pass-Up", L.ROUTE_DELETE, function(self)
+		local route = f:Route()
+		local n = #route.stops
+		local text = n == 0 and L.ROUTE_DELETE_CONFIRM_EMPTY:format(route.name)
+			or n == 1 and L.ROUTE_DELETE_CONFIRM_ONE:format(route.name)
+			or L.ROUTE_DELETE_CONFIRM:format(route.name, n)
+		Confirm(text, L.ROUTE_DELETE_YES, function()
+			if DeleteRoute(route) then
+				f.selectedRouteId = nil
+				f:Refresh()
+			end
+		end, self)
+	end)
+	f.DeleteRoute:SetPoint("LEFT", f.RenameRoute, "RIGHT", 4, 0)
+
 	-- Buscador, arriba y sobre las dos columnas (por ahora filtra los waypoints de la
 	-- ruta elegida; buscará también en las rutas)
 	local ok, search = pcall(CreateFrame, "EditBox", "BridgeManagerSearch", f, "SearchBoxTemplate")
@@ -2220,6 +2312,7 @@ local function CreateManager()
 		self.RouteName:SetWidth(260)
 		self.RouteName:SetText(route.name or "?")
 		self.RouteName:SetWidth(math.min(math.ceil(self.RouteName:GetStringWidth()) + 2, 260))
+		SetButtonEnabled(self.DeleteRoute, #DB.routes > 1)
 		local filter = (self.Search:GetText() or ""):lower():match("^%s*(.-)%s*$")
 		self.filtering = filter ~= ""
 		local shown = 0
@@ -2251,6 +2344,8 @@ local function CreateManager()
 	end
 
 	f:SetScript("OnShow", function(self) self:Refresh() end)
+	-- Al cerrar la ventana, también la confirmación que hubiera abierta
+	f:SetScript("OnHide", function() if confirmBox then confirmBox:Hide() end end)
 	-- Las ventanas nuevas nacen visibles: la dejamos oculta hasta que se abra
 	f:Hide()
 	return f
