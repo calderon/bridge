@@ -698,6 +698,160 @@ local function RegisterWayCommand()
 	wayRegistered = true
 end
 
+---------------------------------------------------------------------------
+-- Importar una lista de /way pegada (de una guía, una web, otro jugador)
+---------------------------------------------------------------------------
+
+-- ¿Ya hay una parada en ese sitio? (mismo criterio que /way)
+local function StopExistsAt(mapID, x, y)
+	for _, s in ipairs(DB.stops) do
+		if s.mapID == mapID and math.abs(s.x - x) < 0.002 and math.abs(s.y - y) < 0.002 then return true end
+	end
+	return false
+end
+
+-- Cada línea con coordenadas se convierte en una parada, en orden. Vale con o sin
+-- "/way" delante (y "/tway" de TomTom); las líneas vacías no cuentan.
+local function ImportWayLines(text, clearFirst)
+	local added, repeated, bad = 0, 0, 0
+	if clearFirst then ClearStops(true) end
+	for raw in (text or ""):gmatch("[^\r\n]+") do
+		local line = raw:match("^%s*(.-)%s*$")
+		if line ~= "" then
+			local lower = line:lower()
+			local args = line
+			if lower:match("^/t?way%s") then
+				args = line:gsub("^%S+%s+", "")
+			elseif lower:match("^/") then
+				args = nil -- otro comando: no es una parada
+			end
+			-- "/way reset ..." no se aplica al importar
+			local mapID, x, y, name
+			if args and not args:lower():match("^reset") then
+				mapID, x, y, name = ParseWay(args)
+			end
+			if not mapID then
+				bad = bad + 1
+			elseif StopExistsAt(mapID, x, y) then
+				repeated = repeated + 1
+			elseif AddStop(mapID, x, y, name, false, false, { source = "import", silent = true }) then
+				added = added + 1
+			else
+				bad = bad + 1
+			end
+		end
+	end
+	local parts = { L.IMPORT_ADDED:format(added) }
+	if repeated > 0 then table.insert(parts, L.IMPORT_REPEATED:format(repeated)) end
+	if bad > 0 then table.insert(parts, L.IMPORT_BAD:format(bad)) end
+	Print(table.concat(parts, ", ") .. ".")
+	return added
+end
+
+local importFrame
+local function ShowImport()
+	if not importFrame then
+		local f = CreateFrame("Frame", "BridgeImportFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+		f:SetSize(560, 380)
+		f:SetPoint("CENTER")
+		f:SetFrameStrata("FULLSCREEN_DIALOG")
+		f:SetToplevel(true)
+		f:SetClampedToScreen(true)
+		if f.SetBackdrop then
+			f:SetBackdrop({
+				bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+				edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+				tile = true, tileSize = 32, edgeSize = 32,
+				insets = { left = 11, right = 12, top = 12, bottom = 11 },
+			})
+		end
+		local bg = f:CreateTexture(nil, "BACKGROUND", nil, -1)
+		bg:SetPoint("TOPLEFT", 11, -12)
+		bg:SetPoint("BOTTOMRIGHT", -12, 11)
+		bg:SetColorTexture(0.06, 0.06, 0.07, 0.97)
+		f:EnableMouse(true)
+		f:SetMovable(true)
+		f:RegisterForDrag("LeftButton")
+		f:SetScript("OnDragStart", f.StartMoving)
+		f:SetScript("OnDragStop", f.StopMovingOrSizing)
+		table.insert(UISpecialFrames, "BridgeImportFrame") -- Esc la cierra
+
+		local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+		title:SetPoint("TOP", 0, -18)
+		title:SetText(L.IMPORT_TITLE)
+		local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
+		close:SetPoint("TOPRIGHT", -6, -6)
+
+		local hint = f:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+		hint:SetPoint("TOPLEFT", 24, -42)
+		hint:SetPoint("RIGHT", -24, 0)
+		hint:SetJustifyH("LEFT")
+		hint:SetText(L.IMPORT_HINT)
+
+		-- Cuadro de texto de varias líneas, con fondo para que se vea dónde pegar
+		local box = CreateFrame("Frame", nil, f, BackdropTemplateMixin and "BackdropTemplate" or nil)
+		box:SetPoint("TOPLEFT", 20, -62)
+		box:SetPoint("BOTTOMRIGHT", -20, 74)
+		if box.SetBackdrop then
+			box:SetBackdrop({
+				bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+				edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+				tile = true, tileSize = 16, edgeSize = 14,
+				insets = { left = 3, right = 3, top = 3, bottom = 3 },
+			})
+			box:SetBackdropColor(0, 0, 0, 0.8)
+		end
+		local sf = CreateFrame("ScrollFrame", "BridgeImportScroll", box, "UIPanelScrollFrameTemplate")
+		sf:SetPoint("TOPLEFT", 8, -8)
+		sf:SetPoint("BOTTOMRIGHT", -28, 8)
+		local eb = CreateFrame("EditBox", nil, sf)
+		eb:SetMultiLine(true)
+		eb:SetAutoFocus(false)
+		eb:SetFontObject(ChatFontNormal)
+		eb:SetWidth(470)
+		eb:SetScript("OnEscapePressed", function() f:Hide() end)
+		sf:SetScrollChild(eb)
+		-- Clic en cualquier parte del cuadro: a escribir
+		box:EnableMouse(true)
+		box:SetScript("OnMouseDown", function() eb:SetFocus() end)
+		f.Edit = eb
+
+		local check = CreateFrame("CheckButton", nil, f, "UICheckButtonTemplate")
+		check:SetSize(24, 24)
+		check:SetPoint("BOTTOMLEFT", 20, 44)
+		local checkText = check.Text or check.text or check:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+		checkText:ClearAllPoints()
+		checkText:SetPoint("LEFT", check, "RIGHT", 2, 0)
+		checkText:SetText(L.IMPORT_CLEAR_FIRST)
+		f.Clear = check
+
+		local cancel = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+		cancel:SetSize(110, 24)
+		cancel:SetPoint("BOTTOMRIGHT", -20, 18)
+		cancel:SetText(CANCEL or "Cancel")
+		cancel:SetScript("OnClick", function() f:Hide() end)
+
+		local import = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+		import:SetSize(110, 24)
+		import:SetPoint("RIGHT", cancel, "LEFT", -8, 0)
+		import:SetText(L.IMPORT_BUTTON)
+		import:SetScript("OnClick", function()
+			ImportWayLines(eb:GetText(), check:GetChecked())
+			f:Hide()
+		end)
+
+		f:SetScript("OnShow", function()
+			eb:SetText("")
+			check:SetChecked(false)
+			eb:SetFocus()
+		end)
+		-- Las ventanas nuevas nacen visibles: la dejamos oculta hasta que se abra
+		f:Hide()
+		importFrame = f
+	end
+	importFrame:Show()
+end
+
 -- Mueve una parada a otro punto y rehace la ruta de AzerothGPS
 local function MoveStop(index, mapID, x, y)
 	local s = DB.stops[index]
@@ -1663,6 +1817,12 @@ local function CreateManager()
 	search:HookScript("OnEscapePressed", function(self) self:ClearFocus() end)
 	f.Search = search
 
+	local import = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+	import:SetSize(140, 22)
+	import:SetPoint("TOPRIGHT", -24, -43)
+	import:SetText(L.IMPORT_OPEN)
+	import:SetScript("OnClick", function() ShowImport() end)
+
 	-- Lista
 	local sf = CreateFrame("ScrollFrame", "BridgeManagerScroll", f, "UIPanelScrollFrameTemplate")
 	sf:SetPoint("TOPLEFT", 18, -74)
@@ -2560,6 +2720,7 @@ SLASH_BRIDGE1 = "/bridge"
 local ALIASES = {
 	clear = "clear", markers = "markers", size = "size", button = "button",
 	version = "version", diag = "diag", debug = "debug", copy = "copy", manage = "manage",
+	import = "import",
 }
 
 local HandleSlash
@@ -2598,6 +2759,8 @@ HandleSlash = function(cmd, arg)
 		Print(DB.showButton and L.BUTTON_SHOWN or L.BUTTON_HIDDEN)
 	elseif cmd == "manage" then
 		ToggleManager()
+	elseif cmd == "import" then
+		ShowImport()
 	elseif cmd == "version" then
 		Print(L.VERSION:format(VERSION))
 	elseif cmd == "size" then
@@ -2652,6 +2815,7 @@ HandleSlash = function(cmd, arg)
 		Print(L.HELP_HEADER:format(VERSION))
 		local lines = {
 			{ W.manage, L.HELP_MANAGE },
+			{ W.import, L.HELP_IMPORT },
 			{ W.clear, L.HELP_CLEAR },
 			{ W.markers, L.HELP_MARKERS },
 			{ W.size .. " N", L.HELP_SIZE },
