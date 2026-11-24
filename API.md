@@ -12,6 +12,7 @@ Bridge ofrece una API para que otros addons (o tus macros con `/run`) puedan cre
 if BridgeAPI and BridgeAPI.version >= 1 then
     -- Bridge está cargado
 end
+-- Las funciones de rutas necesitan BridgeAPI.version >= 2
 ```
 
 Si tu addon la usa, añade `## OptionalDeps: Bridge` a su `.toc` para que Bridge se cargue antes.
@@ -22,6 +23,7 @@ Si tu addon la usa, añade `## OptionalDeps: Bridge` a su `.toc` para que Bridge
 - **`id`:** cada parada tiene un identificador numérico que **no cambia** aunque la parada se reordene, se renombre o se mueva.
 - **Copias:** las funciones que devuelven paradas dan **copias**; cambiarlas no afecta a Bridge.
 - **AzerothGPS:** si está cargado, cada cambio actualiza su ruta. Si no, las paradas solo se ven en el mapa.
+- **Rutas:** lo que se recorre es siempre la **Ruta actual** (la que siguen la brújula, el mapa y AzerothGPS). Todas las funciones de paradas actúan sobre ella. Las **rutas guardadas** son plantillas: `LoadRoute` copia sus paradas en la Ruta actual.
 
 Una parada devuelta por la API tiene estos campos:
 
@@ -35,6 +37,17 @@ Una parada devuelta por la API tiene estos campos:
 | `source` | Quién la añadió, si se indicó (`"Questie"`, `"/way"`, el nombre de tu addon…) |
 | `description` | Descripción, si tiene (sale en el tooltip) |
 | `reached` | `true` si ya se ha llegado a ella en el recorrido (sigue guardada en su ruta) |
+
+Una ruta guardada devuelta por la API (versión 2) tiene estos campos:
+
+| Campo | Qué es |
+|---|---|
+| `id` | Identificador fijo (número, o texto en las rutas compartidas) |
+| `name` | Nombre |
+| `count` | Número de paradas |
+| `shared` | `true` si la ven todos los personajes de la cuenta |
+| `loaded` | `true` si es la última cargada en la Ruta actual |
+| `modified` | Solo en `GetLoadedRoute()`: `true` si la Ruta actual ya no coincide con ella |
 
 ### Funciones
 
@@ -52,6 +65,11 @@ Una parada devuelta por la API tiene estos campos:
 | `BridgeAPI.ShowStop(id)` | `true`/`false` | Abre el mapa del mundo en la parada y la hace parpadear |
 | `BridgeAPI.GetDistance(id)` | yardas o `nil` | Distancia en línea recta desde el jugador. Siempre en yardas, aunque el jugador haya elegido metros. `nil` si no se puede saber (otro continente, mazmorra…) |
 | `BridgeAPI.HasAzerothGPS()` | `true`/`false` | Si las paradas se convierten en ruta |
+| `BridgeAPI.GetRoutes()` | lista | Las rutas guardadas, por orden alfabético (versión 2) |
+| `BridgeAPI.GetLoadedRoute()` | ruta o `nil` | La última ruta guardada cargada en la Ruta actual, con `modified` (versión 2) |
+| `BridgeAPI.LoadRoute(id)` | `true`/`false` | Carga una ruta guardada en la Ruta actual, sustituyendo sus paradas (tu cadáver se queda) (versión 2) |
+| `BridgeAPI.CreateRoute(nombre)` | `id` o `nil` | Crea una ruta guardada vacía (versión 2) |
+| `BridgeAPI.RestartRoute()` | — | Reinicia la Ruta actual: vuelve a la primera parada (versión 2) |
 | `BridgeAPI.RegisterCallback(dueño, evento, fn)` | `true`/`false` | Escuchar un evento |
 | `BridgeAPI.UnregisterCallback(dueño [, evento])` | — | Dejar de escuchar uno o todos |
 
@@ -117,6 +135,7 @@ Bridge offers an API so that other addons (or your `/run` macros) can create and
 if BridgeAPI and BridgeAPI.version >= 1 then
     -- Bridge is loaded
 end
+-- The route functions need BridgeAPI.version >= 2
 ```
 
 If your addon uses it, add `## OptionalDeps: Bridge` to its `.toc` so Bridge loads first.
@@ -127,6 +146,7 @@ If your addon uses it, add `## OptionalDeps: Bridge` to its `.toc` so Bridge loa
 - **`id`:** every stop has a numeric identifier that **never changes**, even if the stop is reordered, renamed or moved.
 - **Copies:** functions that return stops give **copies**; changing them does not affect Bridge.
 - **AzerothGPS:** if it is loaded, every change updates its route. If not, stops are only shown on the map.
+- **Routes:** what is walked is always the **Current route** (the one the compass, the map and AzerothGPS follow). All the stop functions work on it. **Saved routes** are templates: `LoadRoute` copies their stops into the Current route.
 
 A stop returned by the API has these fields:
 
@@ -140,6 +160,17 @@ A stop returned by the API has these fields:
 | `source` | Who added it, if given (`"Questie"`, `"/way"`, your addon's name…) |
 | `description` | Description, if any (shown in the tooltip) |
 | `reached` | `true` if it has already been reached in the current walk (it stays saved in its route) |
+
+A saved route returned by the API (version 2) has these fields:
+
+| Field | Meaning |
+|---|---|
+| `id` | Fixed identifier (a number, or text for shared routes) |
+| `name` | Name |
+| `count` | Number of stops |
+| `shared` | `true` if all the characters of the account see it |
+| `loaded` | `true` if it is the last one loaded into the Current route |
+| `modified` | Only in `GetLoadedRoute()`: `true` if the Current route no longer matches it |
 
 ### Functions
 
@@ -157,6 +188,11 @@ A stop returned by the API has these fields:
 | `BridgeAPI.ShowStop(id)` | `true`/`false` | Opens the world map at the stop and flashes it |
 | `BridgeAPI.GetDistance(id)` | yards or `nil` | Straight-line distance from the player. Always in yards, even if the player chose meters. `nil` if it can't be known (another continent, a dungeon…) |
 | `BridgeAPI.HasAzerothGPS()` | `true`/`false` | Whether stops become a route |
+| `BridgeAPI.GetRoutes()` | list | The saved routes, in alphabetical order (version 2) |
+| `BridgeAPI.GetLoadedRoute()` | route or `nil` | The last saved route loaded into the Current route, with `modified` (version 2) |
+| `BridgeAPI.LoadRoute(id)` | `true`/`false` | Loads a saved route into the Current route, replacing its stops (your corpse stays) (version 2) |
+| `BridgeAPI.CreateRoute(name)` | `id` or `nil` | Creates an empty saved route (version 2) |
+| `BridgeAPI.RestartRoute()` | — | Restarts the Current route: back to the first stop (version 2) |
 | `BridgeAPI.RegisterCallback(owner, event, fn)` | `true`/`false` | Listen to an event |
 | `BridgeAPI.UnregisterCallback(owner [, event])` | — | Stop listening to one or all events |
 
