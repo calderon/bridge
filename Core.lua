@@ -2784,32 +2784,34 @@ local function CreateManager()
 	f.Summary = f:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 	f.Summary:SetPoint("LEFT", search, "RIGHT", 12, 0)
 
-	-- Botón de compartir (rojo, como los del juego, con el símbolo en dorado): abre un menú
-	-- para importar paradas en la ruta elegida o exportarla como líneas /way
-	local import = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-	import:SetSize(28, 22)
-	import:SetPoint("TOPRIGHT", -24, -73)
-	import:SetText("")
-	local shareIcon = import:CreateTexture(nil, "OVERLAY")
-	shareIcon:SetTexture("Interface\\AddOns\\Bridge\\Media\\share")
-	shareIcon:SetSize(16, 16)
-	shareIcon:SetPoint("CENTER", 0, 0)
-	import:SetScript("OnEnter", function(self)
-		GameTooltip:SetOwner(self, "ANCHOR_TOP")
-		GameTooltip:SetText(L.IMPORT_EXPORT)
-		GameTooltip:Show()
-	end)
-	import:SetScript("OnLeave", GameTooltip_Hide)
-	import:SetScript("OnClick", function(self)
+	-- Botones rojos (como los del juego) con un icono dorado de Bridge
+	local function RedIconButton(icon, tip, onClick)
+		local b = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+		b:SetSize(28, 22)
+		b:SetText("")
+		local tex = b:CreateTexture(nil, "OVERLAY")
+		tex:SetTexture("Interface\\AddOns\\Bridge\\Media\\" .. icon)
+		tex:SetSize(16, 16)
+		tex:SetPoint("CENTER", 0, 0)
+		b.Icon = tex
+		b:SetScript("OnEnter", function(self)
+			GameTooltip:SetOwner(self, "ANCHOR_TOP")
+			GameTooltip:SetText(tip)
+			GameTooltip:Show()
+		end)
+		b:SetScript("OnLeave", GameTooltip_Hide)
+		b:SetScript("OnClick", onClick)
+		return b
+	end
+
+	-- Arriba a la derecha: exportar la ruta (líneas /way) e importar paradas en ella
+	f.Export = RedIconButton("export", L.ROUTE_EXPORT_MENU, function()
 		local route = f:Route()
-		ShowMenu(self, {
-			{ text = L.IMPORT_OPEN, func = function() ShowImport(route) end },
-			{ text = L.ROUTE_EXPORT_MENU, disabled = #route.stops == 0, func = function()
-				ShowLog(ExportRoute(route), L.ROUTE_EXPORT_TITLE:format(route.name or "?"))
-			end },
-		}, nil, true)
+		ShowLog(ExportRoute(route), L.ROUTE_EXPORT_TITLE:format(route.name or "?"))
 	end)
-	f.Import = import
+	f.Export:SetPoint("TOPRIGHT", -24, -73)
+	f.Import = RedIconButton("import", L.IMPORT_OPEN, function() ShowImport(f:Route()) end)
+	f.Import:SetPoint("RIGHT", f.Export, "LEFT", -4, 0)
 
 	-- Lista de waypoints
 	local sf = CreateFrame("ScrollFrame", "BridgeManagerScroll", f, "UIPanelScrollFrameTemplate")
@@ -3006,6 +3008,8 @@ local function CreateManager()
 			end
 		end
 		self.Import:SetShown(not nothing)
+		self.Export:SetShown(not nothing)
+		SetButtonEnabled(self.Export, #route.stops > 0)
 		self.Shared:SetShown(not nothing and not current)
 		self.Shared:SetChecked(route.shared == true)
 		-- Todas las paradas de la ruta, en su orden; las que coinciden, resaltadas
