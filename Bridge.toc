@@ -11,6 +11,7 @@
 ## Category: Map
 ## X-Curse-Project-ID: 1826744
 ## OptionalDeps: AzerothGPS, Leatrix_Maps, Questie, TomTom
+## SavedVariables: BridgeSharedDB
 ## SavedVariablesPerCharacter: BridgeAddonDB
 
 Locales.lua

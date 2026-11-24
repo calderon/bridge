@@ -45,6 +45,42 @@ local DB
 -- en ella. DB.loadedRoute = id de la última ruta guardada cargada (solo como referencia).
 local DATA_VERSION = 3 -- versión de los datos guardados, para migrar en el futuro
 
+-- Rutas compartidas con todos los personajes de la cuenta: se guardan aparte, en datos de
+-- la cuenta (BridgeSharedDB), con id de texto ("s1", "s2"…) para no coincidir con las
+-- privadas. La Ruta actual nunca se comparte.
+local SharedDB
+
+-- Todas las rutas que ve este personaje: la actual, sus rutas privadas y las compartidas
+local function AllRoutes()
+	local list = {}
+	for _, route in ipairs(DB.routes) do table.insert(list, route) end
+	if SharedDB then
+		for _, route in ipairs(SharedDB.routes) do table.insert(list, route) end
+	end
+	return list
+end
+
+-- Compartir una ruta guardada con todos tus personajes, o dejar de compartirla (vuelve a
+-- ser solo de este personaje). Cambia de sitio y de id.
+local function SetRouteShared(route, shared)
+	if not route or route.quick or not SharedDB or (route.shared == true) == shared then return end
+	local from, to = shared and DB.routes or SharedDB.routes, shared and SharedDB.routes or DB.routes
+	for i, other in ipairs(from) do
+		if other == route then table.remove(from, i) break end
+	end
+	local oldId = route.id
+	if shared then
+		SharedDB.nextRouteId = (SharedDB.nextRouteId or 0) + 1
+		route.id, route.shared = "s" .. SharedDB.nextRouteId, true
+	else
+		DB.nextRouteId = (DB.nextRouteId or 0) + 1
+		route.id, route.shared = DB.nextRouteId, nil
+	end
+	table.insert(to, route)
+	if DB.loadedRoute == oldId then DB.loadedRoute = route.id end
+	return true
+end
+
 local function NewRoute(name)
 	DB.nextRouteId = (DB.nextRouteId or 0) + 1
 	local route = { id = DB.nextRouteId, name = name, stops = {} }
@@ -730,7 +766,7 @@ end
 -- except: una ruta que no cuenta (la que se está renombrando)
 local function UniqueRouteName(name, except)
 	local function Taken(candidate)
-		for _, route in ipairs(DB.routes) do
+		for _, route in ipairs(AllRoutes()) do
 			if route ~= except and (route.name or ""):lower() == candidate:lower() then return true end
 		end
 	end
@@ -876,8 +912,9 @@ end
 local function DeleteRoute(route)
 	if not route or route.quick then return end
 	if DB.loadedRoute == route.id then DB.loadedRoute = nil end
-	for i, other in ipairs(DB.routes) do
-		if other == route then table.remove(DB.routes, i) break end
+	local list = route.shared and SharedDB and SharedDB.routes or DB.routes
+	for i, other in ipairs(list) do
+		if other == route then table.remove(list, i) break end
 	end
 	RefreshPins()
 	Print(L.ROUTE_DELETED:format(route.name or "?"))
@@ -2220,7 +2257,7 @@ local function CreateManagerRow(f, slot)
 		if mouseButton == "RightButton" then
 			-- Menú contextual: editar, "Mover a ▸" y "Copiar a ▸" con las demás rutas y, separado al final, quitar
 			local stop, from, targets, copyTargets = self.stop, f:Route(), {}, {}
-			for _, route in ipairs(DB.routes) do
+			for _, route in ipairs(AllRoutes()) do
 				if route ~= from then
 					table.insert(targets, { text = route.name or "?", func = function()
 						MoveStopToRoute(stop, from, route)
@@ -2417,7 +2454,7 @@ local function CreateManager()
 
 	-- La ruta elegida en la ventana (si ya no existe, la activa)
 	function f:Route()
-		for _, route in ipairs(DB.routes) do
+		for _, route in ipairs(AllRoutes()) do
 			if route.id == self.selectedRouteId then return route end
 		end
 		local route = ActiveRoute()
@@ -2452,7 +2489,7 @@ local function CreateManager()
 	newRoute:SetPoint("BOTTOMLEFT", 20, 46)
 	newRoute:SetText(L.ROUTE_NEW)
 	newRoute:SetScript("OnClick", function()
-		AskName(L.ROUTE_NEW_NAME:format(#DB.routes + 1), function(name)
+		AskName(L.ROUTE_NEW_NAME:format(#AllRoutes()), function(name)
 			local route = CreateRoute(name)
 			f.selectedRouteId = route.id
 			f:Refresh()
@@ -2639,7 +2676,7 @@ local function CreateManager()
 		self.filtering = filter ~= ""
 		-- Rutas que se ven: todas, o al buscar, las que coinciden por nombre o por alguna parada
 		local results, matchingStops = {}, 0
-		for _, route in ipairs(DB.routes) do
+		for _, route in ipairs(AllRoutes()) do
 			local nameMatch, stopMatches = self.filtering and Matches(route.name, filter), 0
 			if self.filtering then
 				for _, st in ipairs(route.stops) do
@@ -3701,6 +3738,10 @@ f:SetScript("OnEvent", function(_, event, name)
 		if name == ADDON then
 			BridgeAddonDB = BridgeAddonDB or {}
 			DB = BridgeAddonDB
+			-- Rutas compartidas con todos tus personajes (datos de la cuenta)
+			BridgeSharedDB = BridgeSharedDB or {}
+			SharedDB = BridgeSharedDB
+			SharedDB.routes = SharedDB.routes or {}
 			MigrateData()
 			if DB.showPins == nil then DB.showPins = true end
 			if DB.showButton == nil then DB.showButton = true end
