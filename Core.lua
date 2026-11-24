@@ -3669,7 +3669,7 @@ end
 -- API pública: BridgeAPI (ver API.md)
 ---------------------------------------------------------------------------
 
-local API = { version = 1 }
+local API = { version = 2 } -- 2: funciones de rutas
 BridgeAPI = API
 
 -- Eventos que se pueden escuchar con RegisterCallback
@@ -3772,6 +3772,68 @@ end
 -- ¿Las paradas se convierten en ruta? (AzerothGPS instalado y cargado)
 function API.HasAzerothGPS()
 	return HasGPS()
+end
+
+-- Rutas (versión 2 de la API). Las funciones de paradas actúan siempre sobre la Ruta
+-- actual; estas dan acceso a las rutas guardadas (plantillas que se cargan en ella).
+do
+	-- Copia de una ruta guardada para otros addons
+	local function PublicRoute(route)
+		local count = 0
+		for _, st in ipairs(route.stops) do
+			if not st.corpse then count = count + 1 end
+		end
+		return {
+			id = route.id, name = route.name, count = count,
+			shared = route.shared and true or false, loaded = DB.loadedRoute == route.id,
+		}
+	end
+
+	local function FindSavedRouteById(id)
+		for _, route in ipairs(AllRoutes()) do
+			if route.id == id and not route.quick then return route end
+		end
+	end
+
+	-- Las rutas guardadas, por orden alfabético
+	function API.GetRoutes()
+		local list = {}
+		if not DB then return list end
+		for _, route in ipairs(AllRoutes()) do
+			if not route.quick then table.insert(list, PublicRoute(route)) end
+		end
+		return list
+	end
+
+	-- La última ruta guardada cargada en la Ruta actual (nil si ninguna), con
+	-- modified = true si la Ruta actual ya no coincide con ella
+	function API.GetLoadedRoute()
+		local route = DB and LoadedRoute()
+		if not route then return nil end
+		local public = PublicRoute(route)
+		public.modified = not SameStops(ActiveRoute().stops, route.stops)
+		return public
+	end
+
+	-- Cargar una ruta guardada en la Ruta actual (sustituye sus paradas; tu cadáver se queda)
+	function API.LoadRoute(id)
+		local route = DB and FindSavedRouteById(id)
+		if not route then return false end
+		LoadRoute(route)
+		return true
+	end
+
+	-- Crear una ruta guardada vacía. Devuelve su id (el nombre puede llevar " (2)" si ya existía)
+	function API.CreateRoute(name)
+		name = CleanName(name)
+		if not (DB and name) then return nil end
+		return CreateRoute(name).id
+	end
+
+	-- Reiniciar la Ruta actual: ninguna parada alcanzada, se vuelve a la primera
+	function API.RestartRoute()
+		if DB then RestartRoute(ActiveRoute()) end
+	end
 end
 
 -- Avisos: fn(evento, parada) — parada es una copia (en STOPS_REORDERED y
