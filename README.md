@@ -24,7 +24,7 @@ Each place you mark is a **stop**: add it with a click, give it a name, and see 
 * **`/way` commands**: type coordinates in chat and they become stops.
 * **Import `/way` lists**: paste a list of `/way` lines from a guide or website and they all become stops, in order.
 * **Yards or meters**, your choice.
-* **Stops are kept** between sessions (optional).
+* **Stops are kept** between sessions.
 
 ---
 
@@ -67,7 +67,6 @@ It sits at the top right of the world map. Click it to open its menu:
 * **Units** ▸ **Yards** or **Meters**. Meters by default (yards if the game is in US English).
 * **Show compass** (off by default).
 * **Arrival notice** (on by default): the banner, the chat line and the sound. Turn it off to reach stops silently: they are still removed when you arrive.
-* **Keep stops between sessions** (on by default).
 * **Ask for a name when adding** (on by default). The box also has an optional **Description** field (Tab to move to it); the description shows in the stop's tooltip on the map and the minimap. You can add or change it later with **Edit name and description**.
 
 To move the button: **Shift + drag** (`/bridge button reset` puts it back).
@@ -167,7 +166,7 @@ Cada sitio que marcas es una **parada**: la pones con un clic, le das un nombre 
 * **Comandos `/way`**: escribe coordenadas en el chat y se convierten en paradas.
 * **Importar listas de `/way`**: pega una lista de líneas `/way` de una guía o una web y todas se convierten en paradas, en orden.
 * **Yardas o metros**, a tu elección.
-* **Las paradas se guardan** entre sesiones (opcional).
+* **Las paradas se guardan** entre sesiones.
 
 ---
 
@@ -210,7 +209,6 @@ Está arriba a la derecha del mapa del mundo. Haz clic para abrir su menú:
 * **Unidades** ▸ **Yardas** o **Metros**. De entrada, metros (yardas si el juego está en inglés de EE. UU.).
 * **Mostrar brújula** (desactivada de entrada).
 * **Aviso al llegar** (activado de entrada): el cartel, la línea en el chat y el sonido. Desactívalo para llegar a las paradas sin avisos: se siguen quitando al llegar.
-* **Guardar paradas entre sesiones** (activado de entrada).
 * **Pedir nombre al añadir** (activado de entrada). La caja tiene además un campo opcional de **Descripción** (Tab para pasar a él); la descripción sale en el tooltip de la parada en el mapa y el minimapa. Puedes añadirla o cambiarla después con **Editar nombre y descripción**.
 
 Para mover el botón: **Mayús + arrastrar** (`/bridge button reset` lo devuelve a su sitio).
