@@ -2632,25 +2632,56 @@ local function CreateRouteRow(f, slot)
 end
 
 local function CreateManager()
-	local f = CreateFrame("Frame", "BridgeManagerFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+	-- Marco del juego (como la ventana del personaje): barra de título, retrato redondo y ✕.
+	-- Si este cliente no tiene la plantilla, el marco de diálogo de siempre.
+	local ok, f = pcall(CreateFrame, "Frame", "BridgeManagerFrame", UIParent, "ButtonFrameTemplate")
+	local styled = ok and f and true or false
+	if not styled then
+		f = CreateFrame("Frame", "BridgeManagerFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+	end
 	f:SetSize(720, 440)
 	f:SetPoint("CENTER")
 	f:SetFrameStrata("FULLSCREEN_DIALOG")
 	f:SetToplevel(true)
 	f:SetClampedToScreen(true)
-	if f.SetBackdrop then
-		f:SetBackdrop({
-			bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-			edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-			tile = true, tileSize = 32, edgeSize = 32,
-			insets = { left = 11, right = 12, top = 12, bottom = 11 },
-		})
+	f.styled = styled
+	if styled then
+		if ButtonFrameTemplate_HideButtonBar then ButtonFrameTemplate_HideButtonBar(f) end
+		if f.Inset then f.Inset:Hide() end -- cada columna lleva su propio panel
+		if f.SetTitle then
+			f:SetTitle(L.MANAGER_TITLE)
+		else
+			local titleText = f.TitleText or (f.TitleContainer and f.TitleContainer.TitleText)
+			if titleText then titleText:SetText(L.MANAGER_TITLE) end
+		end
+		-- Retrato: el icono de Bridge
+		local icon = "Interface\\AddOns\\Bridge\\Media\\icon"
+		if f.SetPortraitToAsset then
+			f:SetPortraitToAsset(icon)
+		else
+			local portrait = f.portrait or (f.PortraitContainer and f.PortraitContainer.portrait)
+			if portrait then portrait:SetTexture(icon) end
+		end
+	else
+		if f.SetBackdrop then
+			f:SetBackdrop({
+				bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+				edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+				tile = true, tileSize = 32, edgeSize = 32,
+				insets = { left = 11, right = 12, top = 12, bottom = 11 },
+			})
+		end
+		-- Fondo opaco: con el de diálogo normal se transparentaba el mapa
+		local bg = f:CreateTexture(nil, "BACKGROUND", nil, -1)
+		bg:SetPoint("TOPLEFT", 11, -12)
+		bg:SetPoint("BOTTOMRIGHT", -12, 11)
+		bg:SetColorTexture(0.06, 0.06, 0.07, 0.97)
+		local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+		title:SetPoint("TOP", 0, -18)
+		title:SetText(L.MANAGER_TITLE)
+		local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
+		close:SetPoint("TOPRIGHT", -6, -6)
 	end
-	-- Fondo opaco: con el de diálogo normal se transparentaba el mapa
-	local bg = f:CreateTexture(nil, "BACKGROUND", nil, -1)
-	bg:SetPoint("TOPLEFT", 11, -12)
-	bg:SetPoint("BOTTOMRIGHT", -12, 11)
-	bg:SetColorTexture(0.06, 0.06, 0.07, 0.97)
 	f:EnableMouse(true)
 	f:SetMovable(true)
 	f:RegisterForDrag("LeftButton")
@@ -2658,11 +2689,26 @@ local function CreateManager()
 	f:SetScript("OnDragStop", f.StopMovingOrSizing)
 	table.insert(UISpecialFrames, "BridgeManagerFrame") -- Esc la cierra
 
-	local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-	title:SetPoint("TOP", 0, -18)
-	title:SetText(L.MANAGER_TITLE)
-	local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
-	close:SetPoint("TOPRIGHT", -6, -6)
+	-- Con el marco del juego, cada columna va en un panel hundido (como el del personaje)
+	if styled then
+		local function Panel()
+			local okInset, panel = pcall(CreateFrame, "Frame", nil, f, "InsetFrameTemplate")
+			if not okInset or not panel then return end
+			panel:SetFrameLevel(f:GetFrameLevel())
+			return panel
+		end
+		local left, right = Panel(), Panel()
+		if left then
+			left:SetPoint("TOPLEFT", 12, -70)
+			left:SetPoint("BOTTOMLEFT", 12, 36)
+			left:SetWidth(206)
+		end
+		if right then
+			right:SetPoint("TOPLEFT", 222, -70)
+			right:SetPoint("BOTTOMRIGHT", -10, 36)
+		end
+		f.panels = left and right and true or false
+	end
 
 	-- La ruta elegida en la ventana (si ya no existe, la activa)
 	function f:Route()
@@ -2713,6 +2759,7 @@ local function CreateManager()
 	sep:SetWidth(1)
 	sep:SetPoint("TOPLEFT", 218, -76)
 	sep:SetPoint("BOTTOMLEFT", 218, 42)
+	if f.panels then sep:Hide() end
 
 	-- Columna derecha: los waypoints de la ruta elegida
 	f.RouteName = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
@@ -2774,7 +2821,8 @@ local function CreateManager()
 	local ok, search = pcall(CreateFrame, "EditBox", "BridgeManagerSearch", f, "SearchBoxTemplate")
 	if not ok or not search then search = CreateFrame("EditBox", "BridgeManagerSearch", f, "InputBoxTemplate") end
 	search:SetSize(360, 20)
-	search:SetPoint("TOPLEFT", 28, -44)
+	-- (con el marco del juego, a la derecha del retrato)
+	search:SetPoint("TOPLEFT", styled and 70 or 28, styled and -34 or -44)
 	search:SetAutoFocus(false)
 	search:HookScript("OnTextChanged", function() f:Refresh() end)
 	search:HookScript("OnEscapePressed", function(self) self:ClearFocus() end)
