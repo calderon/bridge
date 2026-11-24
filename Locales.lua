@@ -44,6 +44,9 @@ local L = {
 	MENU_MANAGE = "Manage routes…",
 	MANAGER_TITLE = "Manage routes",
 	MANAGER_ROUTES = "Routes",
+	ROUTE_ACTIVATE = "Activate route",
+	ROUTE_IS_ACTIVE = "Active route",
+	ROUTE_ACTIVATED = "Active route: %s",
 	MANAGER_HINT = "Click: show on the map · Drag: reorder",
 
 	-- Importar una lista de /way
@@ -192,6 +195,9 @@ if locale == "esES" or locale == "esMX" then
 	L.MENU_MANAGE = "Gestionar rutas…"
 	L.MANAGER_TITLE = "Gestionar rutas"
 	L.MANAGER_ROUTES = "Rutas"
+	L.ROUTE_ACTIVATE = "Activar ruta"
+	L.ROUTE_IS_ACTIVE = "Ruta activa"
+	L.ROUTE_ACTIVATED = "Ruta activa: %s"
 	L.MANAGER_HINT = "Clic: ver en el mapa · Arrastrar: reordenar"
 
 	L.IMPORT_OPEN = "Importar lista /way"

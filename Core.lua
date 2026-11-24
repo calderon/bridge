@@ -594,6 +594,29 @@ local function RenameStop(index, newName, newDesc, setDesc, route)
 	return true
 end
 
+-- Activar una ruta: pasa a ser la que siguen la brújula, el mapa, el minimapa y
+-- AzerothGPS, y su recorrido empieza desde la primera parada.
+local function ActivateRoute(route)
+	if not route then return end
+	local previous = ActiveRoute()
+	-- Tu cadáver no es de ninguna ruta: se va con la ruta activa, y sigue el primero
+	if previous ~= route then
+		for i = #previous.stops, 1, -1 do
+			local st = previous.stops[i]
+			if st.corpse then
+				table.remove(previous.stops, i)
+				table.insert(route.stops, 1, st)
+			end
+		end
+	end
+	DB.activeRoute = route.id
+	for _, st in ipairs(route.stops) do st.reached = nil end
+	RebuildRoute() -- AzerothGPS: borra su ruta y recibe esta
+	RefreshPins()
+	Print(L.ROUTE_ACTIVATED:format(route.name or "?"))
+	Fire("ACTIVE_ROUTE_CHANGED", { id = route.id, name = route.name })
+end
+
 -- Enlace de mapa de Blizzard para una parada (lo que se ve como "Punto del mapa" en el chat)
 local function StopLink(s)
 	if not (C_Map.SetUserWaypoint and C_Map.GetUserWaypointHyperlink and UiMapPoint) then return end
@@ -1898,8 +1921,9 @@ local function CreateManagerRow(f, slot)
 	return row
 end
 
--- Fila de la lista de rutas (columna izquierda): punto verde si es la activa,
--- nombre y número de waypoints. Clic: elegirla.
+-- Fila de la lista de rutas (columna izquierda): botón de opción (verde si es la
+-- activa; clic en él para activarla), nombre y número de waypoints. Clic en el resto
+-- de la fila: elegirla para ver sus waypoints.
 local ROUTE_ROW_HEIGHT = 22
 local function CreateRouteRow(f, slot)
 	local row = CreateFrame("Button", nil, f.RouteContent)
@@ -1915,10 +1939,42 @@ local function CreateRouteRow(f, slot)
 	hl:SetAllPoints()
 	hl:SetColorTexture(1, 1, 1, 0.08)
 
-	row.Dot = row:CreateTexture(nil, "ARTWORK")
-	row.Dot:SetTexture("Interface\\COMMON\\Indicator-Green")
-	row.Dot:SetSize(12, 12)
-	row.Dot:SetPoint("LEFT", 4, 0)
+	-- Botón de opción: solo una ruta activa. El gris es el mismo icono sin color.
+	row.Dot = CreateFrame("Button", nil, row)
+	row.Dot:SetSize(16, 16)
+	row.Dot:SetPoint("LEFT", 2, 0)
+	row.Dot:SetNormalTexture("Interface\\COMMON\\Indicator-Green")
+	-- Gris (sin color) si no es la activa; amarillo al pasar el ratón por encima
+	function row.Dot:Paint(hover)
+		local tex, active = self:GetNormalTexture(), IsActiveRoute(row.route)
+		tex:SetDesaturated(not active)
+		if active then
+			tex:SetVertexColor(1, 1, 1)
+			tex:SetAlpha(1)
+		elseif hover then
+			tex:SetVertexColor(1, 0.85, 0.1)
+			tex:SetAlpha(1)
+		else
+			tex:SetVertexColor(1, 1, 1)
+			tex:SetAlpha(0.45)
+		end
+	end
+	row.Dot:SetScript("OnClick", function()
+		if row.route and not IsActiveRoute(row.route) then
+			f.selectedRouteId = row.route.id
+			ActivateRoute(row.route)
+		end
+	end)
+	row.Dot:SetScript("OnEnter", function(self)
+		self:Paint(true)
+		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+		GameTooltip:SetText(IsActiveRoute(row.route) and L.ROUTE_IS_ACTIVE or L.ROUTE_ACTIVATE)
+		GameTooltip:Show()
+	end)
+	row.Dot:SetScript("OnLeave", function(self)
+		self:Paint(false)
+		GameTooltip:Hide()
+	end)
 
 	row.Count = row:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 	row.Count:SetPoint("RIGHT", -4, 0)
@@ -2069,14 +2125,14 @@ local function CreateManager()
 	end
 
 	function f:RefreshRoutes()
-		local selected, activeId = self:Route(), ActiveRoute().id
+		local selected = self:Route()
 		for i, route in ipairs(DB.routes) do
 			local row = self.routeRows[i] or CreateRouteRow(self, i)
 			self.routeRows[i] = row
 			row.route = route
 			row.Name:SetText(route.name or "?")
 			row.Count:SetText(string.format("(%d)", #route.stops))
-			row.Dot:SetShown(route.id == activeId)
+			row.Dot:Paint(row.Dot:IsMouseOver())
 			row.Selected:SetShown(route == selected)
 			row:Show()
 		end
@@ -2820,7 +2876,7 @@ local API = { version = 1 }
 BridgeAPI = API
 
 -- Eventos que se pueden escuchar con RegisterCallback
-API.events = { "STOP_ADDED", "STOP_REMOVED", "STOP_CHANGED", "STOP_REACHED", "STOPS_REORDERED", "STOPS_CLEARED" }
+API.events = { "STOP_ADDED", "STOP_REMOVED", "STOP_CHANGED", "STOP_REACHED", "STOPS_REORDERED", "STOPS_CLEARED", "ACTIVE_ROUTE_CHANGED" }
 local KNOWN_EVENTS = {}
 for _, e in ipairs(API.events) do KNOWN_EVENTS[e] = true end
 
