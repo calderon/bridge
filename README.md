@@ -77,7 +77,7 @@ The compass points in a straight line to the next stop (number 1) and shows its 
 
 #### Your corpse
 
-If you die and release your spirit, the first thing you need is to get back to your body. So Bridge adds your corpse as the **first stop**: the compass takes you to it and, when you resurrect, the stop goes away and you carry on with the stops you already had, in the same order. It doesn't matter how you resurrect: at your corpse, at the spirit healer, or when another player resurrects you. It is not added if you die inside a dungeon.
+If you die and release your spirit, the first thing you need is to get back to your body. So Bridge adds your corpse as the **first stop** (it is kept in the Quick route, and the compass and AzerothGPS take you there first whatever route is active): the compass takes you to it and, when you resurrect, the stop goes away and you carry on with the stops you already had, in the same order. It doesn't matter how you resurrect: at your corpse, at the spirit healer, or when another player resurrects you. It is not added if you die inside a dungeon.
 
 ---
 
@@ -219,7 +219,7 @@ La brújula apunta en línea recta a la siguiente parada (la número 1) y muestr
 
 #### Tu cadáver
 
-Si mueres y liberas el espíritu, lo primero que necesitas es volver a por tu cuerpo. Por eso Bridge añade tu cadáver como **primera parada**: la brújula te lleva hasta él y, cuando resucitas, la parada desaparece y sigues con las paradas que ya tenías, en el mismo orden. Da igual cómo resucites: en el cadáver, con el ángel o porque te resucita otro jugador. Si mueres dentro de una mazmorra no se añade.
+Si mueres y liberas el espíritu, lo primero que necesitas es volver a por tu cuerpo. Por eso Bridge añade tu cadáver como **primera parada** (se guarda en la Ruta rápida, y la brújula y AzerothGPS te llevan primero a él sea cual sea la ruta activa): la brújula te lleva hasta él y, cuando resucitas, la parada desaparece y sigues con las paradas que ya tenías, en el mismo orden. Da igual cómo resucites: en el cadáver, con el ángel o porque te resucita otro jugador. Si mueres dentro de una mazmorra no se añade.
 
 ---
 
