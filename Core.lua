@@ -2034,12 +2034,51 @@ local function ArriveAt(index)
 	Fire("STOP_REMOVED", public)
 end
 
+-- Tiempo estimado de llegada: "1:23" o "1:05:30"
+local function FormatETA(seconds)
+	seconds = math.floor(seconds + 0.5)
+	local h, m, s = math.floor(seconds / 3600), math.floor(seconds / 60) % 60, seconds % 60
+	if h > 0 then return string.format("%d:%02d:%02d", h, m, s) end
+	return string.format("%d:%02d", m, s)
+end
+
+-- Cada medio segundo mide cuánto se ha acortado la distancia (velocidad de acercamiento),
+-- la suaviza para que el ETA no salte, y devuelve los segundos que faltan (nil si no te acercas)
+local ETA_STEP = 0.5        -- segundos entre medidas
+local ETA_MIN_SPEED = 1     -- yardas/s: por debajo, no se muestra ETA
+local ETA_MAX_SPEED = 150   -- yardas/s: por encima es un salto (teletransporte, cambio de parada...)
+local function UpdateETA(self, stop, d)
+	local now = GetTime()
+	-- Sin distancia (otro continente, mazmorra...), sin medida anterior o con otra parada: volver a empezar
+	if not d or not self.etaD or self.etaStop ~= stop then
+		self.etaStop, self.etaD, self.etaT, self.etaSpeed = stop, d, now, nil
+		return
+	end
+	local dt = now - self.etaT
+	if dt >= ETA_STEP then
+		local speed = (self.etaD - d) / dt
+		if math.abs(speed) > ETA_MAX_SPEED then
+			self.etaSpeed = nil
+		elseif self.etaSpeed then
+			self.etaSpeed = self.etaSpeed * 0.7 + speed * 0.3
+		else
+			self.etaSpeed = speed
+		end
+		self.etaD, self.etaT = d, now
+	end
+	if self.etaSpeed and self.etaSpeed >= ETA_MIN_SPEED then
+		return d / self.etaSpeed
+	end
+end
+
 local function UpdateCompass(self, elapsed)
 	self.wait = (self.wait or 0) - elapsed
 	if self.wait > 0 then return end
 	self.wait = 0.05
 	local stop = DB.stops[1]
 	if not stop then self:Hide() return end
+	local eta = UpdateETA(self, stop, DistanceTo(stop))
+	self.ETA:SetText(eta and L.ETA:format(FormatETA(eta)) or "")
 	local count = #DB.stops
 	self.Name:SetText(count > 1 and string.format("%s |cff999999(1/%d)|r", stop.name or "?", count) or (stop.name or "?"))
 	local d = DistanceTo(stop)
@@ -2072,7 +2111,7 @@ end
 local function CreateCompass()
 	if compass then return compass end
 	compass = CreateFrame("Frame", "BridgeCompass", UIParent)
-	compass:SetSize(140, 90)
+	compass:SetSize(140, 104)
 	compass:SetFrameStrata("MEDIUM")
 	compass:SetClampedToScreen(true)
 	compass:SetMovable(true)
@@ -2092,6 +2131,10 @@ local function CreateCompass()
 
 	compass.Dist = compass:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
 	compass.Dist:SetPoint("TOP", compass.Name, "BOTTOM", 0, -2)
+
+	compass.ETA = compass:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	compass.ETA:SetPoint("TOP", compass.Dist, "BOTTOM", 0, -2)
+	compass.ETA:SetTextColor(0.75, 0.75, 0.75)
 
 	compass:SetScript("OnUpdate", UpdateCompass)
 	compass:SetScript("OnDragStart", function(self) self:StartMoving() end)

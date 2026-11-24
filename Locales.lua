@@ -29,6 +29,7 @@ local L = {
 
 	-- Tooltip de una parada
 	UNKNOWN_DISTANCE = "Unknown distance",
+	ETA = "ETA %s",
 
 	-- Modo ruta y botón del mapa
 	ROUTE_MODE_ON = "Route mode on: a click on the map adds a stop.",
@@ -163,6 +164,7 @@ if locale == "esES" or locale == "esMX" then
 	L.SEND_FAILED = "No se pudo enviar la parada a AzerothGPS."
 
 	L.UNKNOWN_DISTANCE = "Distancia desconocida"
+	L.ETA = "Llegada en %s"
 
 	L.ROUTE_MODE_ON = "Modo ruta activado: un clic en el mapa añade una parada."
 	L.ROUTE_MODE_OFF = "Modo ruta desactivado."
