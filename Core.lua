@@ -522,14 +522,30 @@ local function CleanName(name)
 	return name ~= "" and name or nil
 end
 
+-- Vacía una lista de paradas, salvo tu cadáver (que solo se quita al resucitar)
+local function WipeKeepingCorpse(stops)
+	for i = #stops, 1, -1 do
+		if not stops[i].corpse then table.remove(stops, i) end
+	end
+end
+
+-- Tras vaciar la ruta de AzerothGPS, tu cadáver vuelve a ser lo primero
+local function ResendCorpse()
+	local corpse = CorpseStop()
+	if corpse and corpse.line then SendToGPS(corpse.line) end
+end
+
 -- Añade la parada ya con su nombre definitivo
 -- opts.route: añadirla a esa ruta en vez de a la activa
 local function CommitStop(zMap, zx, zy, zoneName, name, exclusive, opts)
 	opts = opts or {}
 	local active = IsActiveRoute(opts.route)
+	-- "Ir solo ahí" (Establecer ruta de Questie, Alt+Mayús+clic, RouteTo): se vacía la Ruta
+	-- actual, nunca una ruta guardada, y tu cadáver se queda
 	if exclusive and active then
 		SendToGPS("/agps clear")
-		wipe(Stops())
+		WipeKeepingCorpse(Stops())
+		ResendCorpse()
 		Fire("STOPS_CLEARED")
 	end
 	local line = string.format("/way %s %.1f %.1f %s", zoneName, zx * 100, zy * 100, name)
@@ -778,10 +794,16 @@ local function RemoveStop(index, route)
 	if active then Fire("STOP_REMOVED", public) end
 end
 
+-- Vacía una ruta (sin ruta: la actual). En la actual, tu cadáver se queda.
 local function ClearStops(silent, route)
 	local active = IsActiveRoute(route)
-	if active then SendToGPS("/agps clear") end
-	wipe(StopsOf(route))
+	if active then
+		SendToGPS("/agps clear")
+		WipeKeepingCorpse(StopsOf(route))
+		ResendCorpse()
+	else
+		wipe(StopsOf(route))
+	end
 	RefreshPins()
 	if not silent then Print(L.ROUTE_CLEARED) end
 	if active then Fire("STOPS_CLEARED") end
@@ -791,7 +813,7 @@ end
 local function RemoveStopsWhere(match)
 	local removed = {}
 	for i = #Stops(), 1, -1 do
-		if match(Stops()[i]) then
+		if not Stops()[i].corpse and match(Stops()[i]) then -- tu cadáver no
 			table.insert(removed, PublicStop(Stops()[i]))
 			table.remove(Stops(), i)
 		end
@@ -1128,8 +1150,9 @@ local function HookChatBoxes()
 				if wayArgs then
 					OnExternalWay(wayArgs)
 				elseif t:lower():match("^%s*/agps%s+clear%s*$") then
-					-- Borraste la ruta de AzerothGPS a mano: Bridge también la borra
-					wipe(Stops())
+					-- Borraste la ruta de AzerothGPS a mano: Bridge también vacía la Ruta actual
+					-- (salvo tu cadáver)
+					WipeKeepingCorpse(Stops())
 					RefreshPins()
 					Fire("STOPS_CLEARED")
 				end

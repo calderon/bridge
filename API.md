@@ -41,9 +41,9 @@ Una parada devuelta por la API tiene estos campos:
 | Función | Devuelve | Qué hace |
 |---|---|---|
 | `BridgeAPI.AddStop(mapID, x, y [, opts])` | `id` o `nil` | Añade una parada al final de la ruta |
-| `BridgeAPI.RouteTo(mapID, x, y [, opts])` | `id` o `nil` | Borra la ruta y deja esta parada como única |
+| `BridgeAPI.RouteTo(mapID, x, y [, opts])` | `id` o `nil` | Vacía la Ruta actual y deja esta parada como única (tu cadáver se queda) |
 | `BridgeAPI.RemoveStop(id)` | `true`/`false` | Quita una parada |
-| `BridgeAPI.ClearStops()` | — | Quita todas las paradas |
+| `BridgeAPI.ClearStops()` | — | Vacía la Ruta actual (tu cadáver se queda) |
 | `BridgeAPI.RenameStop(id, nombre)` | `true`/`false` | Cambia el nombre (la descripción no cambia) |
 | `BridgeAPI.MoveStop(id, mapID, x, y)` | `true`/`false` | Cambia la posición en el mapa |
 | `BridgeAPI.ReorderStop(id, posición)` | `true`/`false` | Cambia su lugar en la ruta (1 = la primera) |
@@ -146,9 +146,9 @@ A stop returned by the API has these fields:
 | Function | Returns | What it does |
 |---|---|---|
 | `BridgeAPI.AddStop(mapID, x, y [, opts])` | `id` or `nil` | Adds a stop at the end of the route |
-| `BridgeAPI.RouteTo(mapID, x, y [, opts])` | `id` or `nil` | Clears the route and leaves this as the only stop |
+| `BridgeAPI.RouteTo(mapID, x, y [, opts])` | `id` or `nil` | Empties the Current route and leaves this as the only stop (your corpse stays) |
 | `BridgeAPI.RemoveStop(id)` | `true`/`false` | Removes a stop |
-| `BridgeAPI.ClearStops()` | — | Removes all stops |
+| `BridgeAPI.ClearStops()` | — | Empties the Current route (your corpse stays) |
 | `BridgeAPI.RenameStop(id, name)` | `true`/`false` | Changes the name (the description is kept) |
 | `BridgeAPI.MoveStop(id, mapID, x, y)` | `true`/`false` | Changes its position on the map |
 | `BridgeAPI.ReorderStop(id, position)` | `true`/`false` | Changes its place in the route (1 = first) |
