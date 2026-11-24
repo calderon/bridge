@@ -782,6 +782,25 @@ local function CopyStopToRoute(stop, to)
 	return copy
 end
 
+-- ¿Se ha llegado ya a alguna parada de esta ruta?
+local function HasReached(route)
+	for _, st in ipairs(route.stops) do
+		if st.reached then return true end
+	end
+	return false
+end
+
+-- Reiniciar el recorrido: ninguna parada alcanzada. Si es la activa, la brújula vuelve
+-- a la primera y AzerothGPS recibe otra vez la ruta entera.
+local function RestartRoute(route)
+	if not route then return end
+	for _, st in ipairs(route.stops) do st.reached = nil end
+	if IsActiveRoute(route) then RebuildRoute() end
+	RefreshPins()
+	Print(L.ROUTE_RESTARTED:format(route.name or "?"))
+	return true
+end
+
 -- Borrar una ruta con sus paradas. Nunca la última. Si era la activa, se activa otra
 -- (ActivateRoute se lleva también tu cadáver, si lo hay).
 local function DeleteRoute(route)
@@ -2380,6 +2399,13 @@ local function CreateManager()
 	end)
 	f.DuplicateRoute:SetPoint("LEFT", f.RenameRoute, "RIGHT", 4, 0)
 
+	-- Reiniciar su recorrido (solo si ya se ha llegado a alguna parada)
+	f.RestartRoute = IconButton(f, "Interface\\Buttons\\UI-RefreshButton", L.ROUTE_RESTART, function()
+		RestartRoute(f:Route())
+		f:Refresh()
+	end)
+	f.RestartRoute:SetPoint("LEFT", f.DuplicateRoute, "RIGHT", 4, 0)
+
 	-- Y borrarla (con confirmación; nunca la última)
 	f.DeleteRoute = IconButton(f, "Interface\\Buttons\\UI-GroupLoot-Pass-Up", L.ROUTE_DELETE, function(self)
 		local route = f:Route()
@@ -2394,7 +2420,7 @@ local function CreateManager()
 			end
 		end, self)
 	end)
-	f.DeleteRoute:SetPoint("LEFT", f.DuplicateRoute, "RIGHT", 4, 0)
+	f.DeleteRoute:SetPoint("LEFT", f.RestartRoute, "RIGHT", 4, 0)
 
 	-- Buscador, arriba y sobre las dos columnas (por ahora filtra los waypoints de la
 	-- ruta elegida; buscará también en las rutas)
@@ -2548,6 +2574,8 @@ local function CreateManager()
 		self.RouteName:SetWidth(math.max(1, math.min(math.ceil(self.RouteName:GetStringWidth()) + 2, 260)))
 		self.RenameRoute:SetShown(not nothing)
 		self.DuplicateRoute:SetShown(not nothing)
+		self.RestartRoute:SetShown(not nothing)
+		SetButtonEnabled(self.RestartRoute, HasReached(route))
 		self.DeleteRoute:SetShown(not nothing)
 		self.Import:SetShown(not nothing)
 		SetButtonEnabled(self.DeleteRoute, #DB.routes > 1)
