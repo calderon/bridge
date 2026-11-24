@@ -2720,13 +2720,42 @@ local function CreateManager()
 		return route
 	end
 
+	-- Botones rojos (como los del juego) con un icono dorado de Bridge
+	local function RedIconButton(icon, tip, onClick)
+		local b = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+		b:SetSize(28, 22)
+		b:SetText("")
+		local tex = b:CreateTexture(nil, "OVERLAY")
+		tex:SetTexture("Interface\\AddOns\\Bridge\\Media\\" .. icon)
+		tex:SetSize(16, 16)
+		tex:SetPoint("CENTER", 0, 0)
+		b.Icon = tex
+		b:SetScript("OnEnter", function(self)
+			GameTooltip:SetOwner(self, "ANCHOR_TOP")
+			GameTooltip:SetText(tip)
+			GameTooltip:Show()
+		end)
+		b:SetScript("OnLeave", GameTooltip_Hide)
+		b:SetScript("OnClick", onClick)
+		return b
+	end
+
 	-- Columna izquierda: las rutas
+	-- Arriba a la izquierda: crear una ruta nueva (queda elegida, no cargada); a su lado, el título
+	local newRoute = RedIconButton("add", L.ROUTE_NEW, function(self)
+		AskName(L.ROUTE_NEW_NAME:format(#AllRoutes()), function(name, desc)
+			local route = CreateRoute(name, desc)
+			f.selectedRouteId = route.id
+			f:Refresh()
+		end, nil, { hint = L.ROUTE_NAME_HINT, anchor = self })
+	end)
+	newRoute:SetPoint("TOPRIGHT", f, "TOPLEFT", 212, -76) -- a la derecha de la columna
 	local routesTitle = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-	routesTitle:SetPoint("TOPLEFT", 24, -80)
+	routesTitle:SetPoint("LEFT", f, "TOPLEFT", 24, -87) -- a la altura del botón
 	routesTitle:SetText(L.MANAGER_ROUTES)
 	local rsf = CreateFrame("ScrollFrame", "BridgeManagerRouteScroll", f, "UIPanelScrollFrameTemplate")
-	rsf:SetPoint("TOPLEFT", 18, -98)
-	rsf:SetPoint("BOTTOMLEFT", 18, 74)
+	rsf:SetPoint("TOPLEFT", 18, -106) -- un poco de aire bajo "Rutas" y el +
+	rsf:SetPoint("BOTTOMLEFT", 18, 42)
 	rsf:SetWidth(172)
 	local rcontent = CreateFrame("Frame", nil, rsf)
 	rcontent:SetSize(172, 1)
@@ -2741,18 +2770,6 @@ local function CreateManager()
 	f.RouteSeparator:SetPoint("TOPLEFT", rcontent, "TOPLEFT", 4, -ROUTE_ROW_HEIGHT - ROUTE_GAP / 2)
 	f.RouteSeparator:SetPoint("RIGHT", rcontent, "RIGHT", -4, 0)
 
-	-- Bajo la lista de rutas: crear una ruta nueva (queda elegida, no activa)
-	local newRoute = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-	newRoute:SetSize(184, 22)
-	newRoute:SetPoint("BOTTOMLEFT", 20, 46)
-	newRoute:SetText(L.ROUTE_NEW)
-	newRoute:SetScript("OnClick", function()
-		AskName(L.ROUTE_NEW_NAME:format(#AllRoutes()), function(name, desc)
-			local route = CreateRoute(name, desc)
-			f.selectedRouteId = route.id
-			f:Refresh()
-		end, nil, { hint = L.ROUTE_NAME_HINT, anchor = newRoute })
-	end)
 
 	local sep = f:CreateTexture(nil, "ARTWORK")
 	sep:SetColorTexture(1, 1, 1, 0.08)
@@ -2832,25 +2849,6 @@ local function CreateManager()
 	f.Summary = f:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 	f.Summary:SetPoint("LEFT", search, "RIGHT", 12, 0)
 
-	-- Botones rojos (como los del juego) con un icono dorado de Bridge
-	local function RedIconButton(icon, tip, onClick)
-		local b = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-		b:SetSize(28, 22)
-		b:SetText("")
-		local tex = b:CreateTexture(nil, "OVERLAY")
-		tex:SetTexture("Interface\\AddOns\\Bridge\\Media\\" .. icon)
-		tex:SetSize(16, 16)
-		tex:SetPoint("CENTER", 0, 0)
-		b.Icon = tex
-		b:SetScript("OnEnter", function(self)
-			GameTooltip:SetOwner(self, "ANCHOR_TOP")
-			GameTooltip:SetText(tip)
-			GameTooltip:Show()
-		end)
-		b:SetScript("OnLeave", GameTooltip_Hide)
-		b:SetScript("OnClick", onClick)
-		return b
-	end
 
 	-- Arriba a la derecha: exportar la ruta (líneas /way) e importar paradas en ella
 	f.Export = RedIconButton("export", L.ROUTE_EXPORT_MENU, function()
@@ -2945,11 +2943,13 @@ local function CreateManager()
 	end
 
 	-- La barra de desplazamiento solo cuando la lista no cabe
+	-- Devuelve si hace falta la barra (para dejarle sitio o no)
 	local function FitScroll(bar, scroll, height)
-		if not bar then return end
 		local needed = height > (scroll:GetHeight() or 0)
+		if not bar then return needed end
 		bar:SetShown(needed)
 		if not needed then scroll:SetVerticalScroll(0) end
+		return needed
 	end
 
 	-- Búsqueda: en el nombre de las rutas y en las paradas (nombre, descripción y zona)
@@ -2994,7 +2994,10 @@ local function CreateManager()
 		end
 		for k = #results + 1, #self.routeRows do self.routeRows[k]:Hide() end
 		rcontent:SetHeight(math.max(1, #results * ROUTE_ROW_HEIGHT + gap))
-		FitScroll(self.RouteScrollBar, rsf, #results * ROUTE_ROW_HEIGHT + gap)
+		-- Las filas ocupan todo el panel salvo que haga falta la barra de desplazamiento
+		local width = FitScroll(self.RouteScrollBar, rsf, #results * ROUTE_ROW_HEIGHT + gap) and 172 or 194
+		rsf:SetWidth(width)
+		rcontent:SetWidth(width)
 	end
 
 	function f:Refresh()
@@ -3089,7 +3092,12 @@ local function CreateManager()
 		end
 		for k = shown + 1, #self.rows do self.rows[k]:Hide() end
 		content:SetHeight(math.max(1, shown * ROW_HEIGHT))
-		FitScroll(self.ScrollBar, sf, shown * ROW_HEIGHT)
+		-- Las filas ocupan todo el panel salvo que haga falta la barra de desplazamiento
+		local right = FitScroll(self.ScrollBar, sf, shown * ROW_HEIGHT) and -38 or -14
+		sf:SetPoint("BOTTOMRIGHT", right, 74)
+		content:SetWidth(self:GetWidth() - 226 + right)
+		-- Exportar (y a su izquierda Importar) alineado por la derecha con los iconos de las paradas
+		self.Export:SetPoint("TOPRIGHT", right - 2, -73)
 		if self.filtering and #results == 0 then
 			self.Empty:SetText(L.MANAGER_NO_MATCH)
 			self.Empty:Show()
