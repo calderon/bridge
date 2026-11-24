@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.0](https://github.com/calderon/bridge/compare/v1.1.0...v1.2.0) (2026-11-24)
+
+
+### Features
+
+* add an optional description to stops ([967511b](https://github.com/calderon/bridge/commit/967511bd4c6e1a9598a352231b6da3924dd6c85b)), closes [#16](https://github.com/calderon/bridge/issues/16)
+* make the arrival notice option silence chat and sound too ([103f9a6](https://github.com/calderon/bridge/commit/103f9a61f26a3c404c8b9616878bca4f5d7fe1b5)), closes [#19](https://github.com/calderon/bridge/issues/19)
+
 ## [1.1.0](https://github.com/calderon/bridge/compare/v1.0.0...v1.1.0) (2026-11-24)
 
 
