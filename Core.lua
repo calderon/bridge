@@ -1093,6 +1093,122 @@ local function ShareStop(s, channel)
 	Print(L.STOP_SHARED:format(s.name))
 end
 
+-- Nombre de la ruta tal como sale en la línea del chat al compartirla (como mucho 60 bytes,
+-- sin cortar una letra por la mitad). Quien la recibe lo usa para casar la línea con los datos.
+local function ChatRouteName(name)
+	name = (name or "?"):gsub("[\t\r\n|]", " ")
+	if #name > 60 then
+		name = name:sub(1, 60):gsub("[\192-\255][\128-\191]*$", "") .. "…"
+	end
+	return name
+end
+
+-- Compartir una ruta entera con el grupo, la banda o la hermandad.
+-- Primero van los datos (mensajes de addon troceados: solo los recibe quien tiene Bridge) y
+-- al final una línea normal en el chat, que ven todos; Bridge la convierte en un enlace.
+-- (Bloque: fuera quedan ShareRoute y ShareChannels.)
+local ShareRoute, ShareChannels
+do
+	local MAX_STOPS = 100
+	local CHUNK = 220 -- cada mensaje de addon admite 255 caracteres, con la cabecera
+	local sent = 0
+
+	-- Paradas que se comparten: todas menos tu cadáver
+	local function SharedStops(route)
+		local list = {}
+		for _, st in ipairs(route.stops) do
+			if not st.corpse and st.mapID then table.insert(list, st) end
+		end
+		return list
+	end
+
+	local function Clean(text)
+		return ((text or ""):gsub("[\t\r\n|]", " "))
+	end
+
+	-- Canales en los que estás (para el menú de compartir)
+	function ShareChannels(route, onPick)
+		local items = {}
+		local _, instanceType = IsInInstance()
+		local function add(text, ok, channel)
+			if ok then
+				table.insert(items, { text = text, func = function() onPick(route, channel) end })
+			end
+		end
+		add(L.SHARE_PARTY, IsInGroup and IsInGroup() and not (IsInRaid and IsInRaid()), "PARTY")
+		add(L.SHARE_RAID, IsInRaid and IsInRaid(), "RAID")
+		add(L.SHARE_BATTLEGROUND, instanceType == "pvp", "INSTANCE_CHAT")
+		add(L.SHARE_GUILD, IsInGuild and IsInGuild(), "GUILD")
+		-- Susurrar a tu objetivo (un jugador; también tú mismo)
+		if UnitIsPlayer("target") then
+			local target = GetUnitName("target", true)
+			if target then
+				table.insert(items, { text = L.SHARE_WHISPER:format(Ambiguate and Ambiguate(target, "short") or target),
+					func = function() onPick(route, "WHISPER", target) end })
+			end
+		end
+		if #items == 0 then
+			items[1] = { text = L.SHARE_NO_CHANNEL, disabled = true, func = function() end }
+		end
+		return items
+	end
+
+	-- target: a quién se susurra (solo con channel = "WHISPER")
+	function ShareRoute(route, channel, target)
+		local stops = SharedStops(route)
+		if #stops == 0 then return end
+		if #stops > MAX_STOPS then
+			Print(L.ROUTE_SHARE_TOO_BIG:format(MAX_STOPS))
+			return
+		end
+		-- La Ruta actual se comparte con el nombre de la ruta cargada, o "Ruta de <personaje>"
+		local name, desc = route.name, route.desc
+		if route.quick then
+			local loaded = LoadedRoute()
+			name = loaded and loaded.name or L.ROUTE_OF:format(UnitName("player") or "?")
+			desc = loaded and loaded.desc
+		end
+		-- Los datos: "nombre<tab>descripción" y una línea por parada
+		local lines = { Clean(name) .. "\t" .. Clean(desc) }
+		for _, st in ipairs(stops) do
+			table.insert(lines, string.format("%d\t%.4f\t%.4f\t%s\t%s",
+				st.mapID, st.x or 0, st.y or 0, Clean(st.name), Clean(st.desc)))
+		end
+		local data = table.concat(lines, "\n")
+		local chunks = {}
+		for i = 1, #data, CHUNK do table.insert(chunks, data:sub(i, i + CHUNK - 1)) end
+		sent = sent + 1
+		local id = string.format("%d%d", time() % 100000, sent)
+		local addonChannel = channel
+		local chat = L.ROUTE_SHARE_CHAT:format(ChatRouteName(name)):sub(1, 255)
+		-- Espaciados, para que el juego no los corte; al terminar, la línea del chat
+		local n = 0
+		local function SendNext()
+			n = n + 1
+			if n <= #chunks then
+				local msg = string.format("R\t%s\t%d\t%d\t%s", id, n, #chunks, chunks[n])
+				local ok = pcall(C_ChatInfo.SendAddonMessage, "Bridge", msg, addonChannel, target)
+				if not ok and addonChannel == "INSTANCE_CHAT" then
+					addonChannel = "BATTLEGROUND"
+					pcall(C_ChatInfo.SendAddonMessage, "Bridge", msg, addonChannel)
+				end
+				C_Timer.After(0.2, SendNext)
+			else
+				if not pcall(SendChatMessage, chat, channel, nil, target) and channel == "INSTANCE_CHAT" then
+					pcall(SendChatMessage, chat, "BATTLEGROUND")
+				end
+				Print(L.ROUTE_SHARED_SENT:format(name or "?"))
+			end
+		end
+		if C_ChatInfo and C_ChatInfo.SendAddonMessage then
+			SendNext()
+		else
+			n = #chunks
+			SendNext()
+		end
+	end
+end
+
 ---------------------------------------------------------------------------
 -- Copiar los /way que no manda Bridge (escritos a mano, macros, otros addons)
 ---------------------------------------------------------------------------
@@ -2874,6 +2990,13 @@ local function CreateManager()
 	f.Export:SetPoint("TOPRIGHT", -24, -73)
 	f.Import = RedIconButton("import", L.IMPORT_OPEN, function() ShowImport(f:Route()) end)
 	f.Import:SetPoint("RIGHT", f.Export, "LEFT", -4, 0)
+	-- Compartir la ruta entera con el grupo, la banda o la hermandad
+	f.Share = RedIconButton("share", L.ROUTE_SHARE, function(self)
+		GameTooltip:Hide()
+		ShowMenu(self, ShareChannels(f:Route(), ShareRoute),
+			function(menu) menu:SetPoint("TOPRIGHT", self, "BOTTOMRIGHT", 0, -2) end, true)
+	end)
+	f.Share:SetPoint("RIGHT", f.Import, "LEFT", -4, 0)
 
 	-- Lista de waypoints
 	local sf = CreateFrame("ScrollFrame", "BridgeManagerScroll", f, "UIPanelScrollFrameTemplate")
@@ -3077,6 +3200,12 @@ local function CreateManager()
 		self.Import:SetShown(not nothing)
 		self.Export:SetShown(not nothing)
 		SetButtonEnabled(self.Export, #route.stops > 0)
+		self.Share:SetShown(not nothing)
+		local shareable = false
+		for _, st in ipairs(route.stops) do
+			if not st.corpse then shareable = true break end
+		end
+		SetButtonEnabled(self.Share, shareable)
 		self.Shared:SetShown(not nothing and not current)
 		self.Shared:SetChecked(route.shared == true)
 		-- Todas las paradas de la ruta, en su orden; las que coinciden, resaltadas
@@ -3845,6 +3974,103 @@ do
 			{ mapID = mapID, x = x, y = y, name = name, who = who })
 	end
 
+	-- Rutas enteras compartidas (ShareRoute). Solo duran la sesión: no se guardan.
+	local incoming = {}  -- [remitente .. id] = { total, got, parts }
+	local shares = {}    -- [id] = { name, desc, stops, who, route (si ya se guardó) }
+	local latest = {}    -- [remitente] = la última ruta completa que mandó
+
+	local function ParseRoute(data)
+		local header, rest = data:match("^([^\n]*)\n?(.*)$")
+		local name, desc = strsplit("\t", header or "", 2)
+		name = CleanName(name)
+		if not name then return end
+		local stops = {}
+		for line in rest:gmatch("[^\n]+") do
+			local mapID, x, y, stopName, stopDesc = strsplit("\t", line, 5)
+			mapID, x, y = tonumber(mapID), tonumber(x), tonumber(y)
+			if not (mapID and x and y and x >= 0 and x <= 1 and y >= 0 and y <= 1) then return end
+			if not C_Map.GetMapInfo(mapID) then return end
+			table.insert(stops, { mapID = mapID, x = x, y = y, name = CleanName(stopName), desc = CleanName(stopDesc) })
+			if #stops > 100 then return end
+		end
+		if #stops == 0 then return end
+		return { name = name, desc = CleanName(desc), stops = stops }
+	end
+
+	local function OnRouteChunk(text, sender)
+		local _, id, seq, total, chunk = strsplit("\t", text, 5)
+		seq, total = tonumber(seq), tonumber(total)
+		if not (id and seq and total and chunk) or total < 1 or total > 60 or seq < 1 or seq > total then return end
+		local key = sender .. id
+		local t = incoming[key]
+		if not t or t.total ~= total then
+			t = { total = total, got = 0, parts = {} }
+			incoming[key] = t
+		end
+		if not t.parts[seq] then
+			t.parts[seq] = chunk
+			t.got = t.got + 1
+		end
+		if t.got < t.total then return end
+		incoming[key] = nil
+		local route = ParseRoute(table.concat(t.parts))
+		if not route then return end -- incompleta o mal formada: se ignora
+		route.who = Ambiguate and Ambiguate(sender, "short") or sender
+		shares[id] = route
+		latest[Ambiguate and Ambiguate(sender, "none") or sender] = id
+	end
+
+	-- Guardar la ruta compartida al pulsar su enlace (ruta guardada privada, sin cargarla)
+	local function SaveShared(id)
+		local data = shares[id]
+		if not data then
+			Print(L.ROUTE_SHARE_GONE)
+			return
+		end
+		if data.route then
+			for _, route in ipairs(AllRoutes()) do
+				if route == data.route then
+					Print(L.ROUTE_SHARE_ALREADY:format(route.name or "?"))
+					return
+				end
+			end
+		end
+		local route = NewRoute(UniqueRouteName(data.name))
+		route.desc = data.desc
+		for _, st in ipairs(data.stops) do
+			AddStop(st.mapID, st.x, st.y, st.name, false, false,
+				{ source = data.who, silent = true, route = route, description = st.desc })
+		end
+		data.route = route
+		if managerFrame then managerFrame.selectedRouteId = route.id end
+		RefreshPins()
+		Print(L.ROUTE_SHARE_SAVED:format(route.name, data.who))
+	end
+
+	-- Quien tiene Bridge ve la línea del chat como un enlace, sin el texto de descarga
+	-- (También la que envías al susurrar: ahí 'author' es a quién se la mandas.)
+	local function ChatFilter(_, event, msg, author, ...)
+		if type(msg) ~= "string" or msg:sub(1, 9) ~= "[Bridge] " or not author then return false end
+		local from = event == "CHAT_MSG_WHISPER_INFORM" and UnitName("player") or author
+		local id = latest[Ambiguate and Ambiguate(from, "none") or from]
+		local data = id and shares[id]
+		if not data or not msg:find(ChatRouteName(data.name), 1, true) then return false end
+		local link = L.ROUTE_LINK_LINE:format(string.format("|cff71d5ff|Haddon:bridge:%s|h[%s]|h|r",
+			id, L.ROUTE_LINK:format(ChatRouteName(data.name), #data.stops)))
+		return false, link, author, ...
+	end
+
+	local lastClick
+	local function OnLinkClick(link)
+		local id = type(link) == "string" and link:match("^addon:bridge:(%w+)")
+		if not id then return end
+		-- Puede llegar por dos caminos a la vez: solo una vez por clic
+		local now = GetTime()
+		if lastClick and lastClick.id == id and now - lastClick.at < 0.3 then return end
+		lastClick = { id = id, at = now }
+		SaveShared(id)
+	end
+
 	function StartSharing()
 		if not (C_ChatInfo and C_ChatInfo.RegisterAddonMessagePrefix) then return end
 		C_ChatInfo.RegisterAddonMessagePrefix(SHARE_PREFIX)
@@ -3852,11 +4078,29 @@ do
 		ev:RegisterEvent("CHAT_MSG_ADDON")
 		ev:SetScript("OnEvent", function(_, _, prefix, text, _, sender)
 			if prefix ~= SHARE_PREFIX or not DB or type(text) ~= "string" then return end
-			-- Lo que mandas tú también te llega: lo ignoramos
+			-- Las rutas que compartes tú también te llegan: tu línea del chat sale como enlace
+			if text:sub(1, 2) == "R\t" then
+				OnRouteChunk(text, sender or "?")
+				return
+			end
+			-- Las paradas que mandas tú también te llegan: las ignoramos
 			local me = UnitName("player")
 			if sender == me or (Ambiguate and Ambiguate(sender or "", "none") == me) then return end
 			OnSharedStop(text, sender or "?")
 		end)
+		if ChatFrame_AddMessageEventFilter then
+			for _, event in ipairs({ "CHAT_MSG_PARTY", "CHAT_MSG_PARTY_LEADER", "CHAT_MSG_RAID",
+				"CHAT_MSG_RAID_LEADER", "CHAT_MSG_INSTANCE_CHAT", "CHAT_MSG_INSTANCE_CHAT_LEADER",
+				"CHAT_MSG_BATTLEGROUND", "CHAT_MSG_BATTLEGROUND_LEADER", "CHAT_MSG_GUILD", "CHAT_MSG_WHISPER", "CHAT_MSG_WHISPER_INFORM" }) do
+				pcall(ChatFrame_AddMessageEventFilter, event, ChatFilter)
+			end
+		end
+		-- Clic en el enlace: el juego avisa a los addons de los enlaces "addon:"; por si este
+		-- cliente no lo hace, también enganchamos SetItemRef
+		if EventRegistry and EventRegistry.RegisterCallback then
+			EventRegistry:RegisterCallback("SetItemRef", function(_, link) OnLinkClick(link) end, {})
+		end
+		if SetItemRef then hooksecurefunc("SetItemRef", OnLinkClick) end
 	end
 end
 
