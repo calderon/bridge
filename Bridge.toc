@@ -1,8 +1,8 @@
 ## Interface: 16001
 ## Title: Bridge
-## Notes: Waypoints on the world map (Leatrix Maps, Questie). With AzerothGPS, they become a road route.
-## Notes-esES: Paradas en el mapa del mundo (Leatrix Maps, Questie). Con AzerothGPS, se convierten en una ruta por carreteras.
-## Notes-esMX: Paradas en el mapa del mundo (Leatrix Maps, Questie). Con AzerothGPS, se convierten en una ruta por carreteras.
+## Notes: Routes of waypoints on the world map, with compass, minimap and sharing.
+## Notes-esES: Rutas de paradas en el mapa del mundo, con brújula, minimapa y para compartir.
+## Notes-esMX: Rutas de paradas en el mapa del mundo, con brújula, minimapa y para compartir.
 ## Author: Daniel Calderón
 ## IconTexture: Interface\AddOns\Bridge\Media\icon
 # x-release-please-start-version
