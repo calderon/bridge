@@ -89,6 +89,18 @@ local L = {
 
 	-- Importar una lista de /way
 	IMPORT_OPEN = "Import stops",
+	ROUTE_SHARE = "Share route",
+	SHARE_NO_CHANNEL = "You're not in a party, raid or guild, and have no player targeted",
+	SHARE_WHISPER = "Whisper to %s",
+	ROUTE_SHARE_CHAT = "[Bridge] Add the route «%s» in Bridge. Get it on CurseForge: curseforge.com/wow/addons/bridge",
+	ROUTE_OF = "%s's route",
+	ROUTE_SHARED_SENT = "Route «%s» shared",
+	ROUTE_SHARE_TOO_BIG = "Routes with more than %d stops can't be shared.",
+	ROUTE_LINK = "%s (%d stops)",
+	ROUTE_LINK_LINE = "Add this route: %s",
+	ROUTE_SHARE_SAVED = "Route «%s» from %s saved. Load it in Manage routes.",
+	ROUTE_SHARE_ALREADY = "You already have this route: «%s».",
+	ROUTE_SHARE_GONE = "That route is no longer available: ask them to share it again.",
 	IMPORT_TITLE_ROUTE = "Import stops into “%s”",
 	IMPORT_TITLE_NEW = "Import stops into a new route",
 	IMPORT_AS_NEW = "Import as a new route:",
@@ -296,6 +308,18 @@ if locale == "esES" or locale == "esMX" then
 	L.MENU_COPY_TO = "Copiar a"
 
 	L.IMPORT_OPEN = "Importar paradas"
+	L.ROUTE_SHARE = "Compartir ruta"
+	L.SHARE_NO_CHANNEL = "No estás en grupo, banda ni hermandad, ni tienes a un jugador de objetivo"
+	L.SHARE_WHISPER = "Susurrar a %s"
+	L.ROUTE_SHARE_CHAT = "[Bridge] Añade la ruta «%s» en Bridge. Consíguelo en CurseForge: curseforge.com/wow/addons/bridge"
+	L.ROUTE_OF = "Ruta de %s"
+	L.ROUTE_SHARED_SENT = "Ruta «%s» compartida"
+	L.ROUTE_SHARE_TOO_BIG = "No se pueden compartir rutas de más de %d paradas."
+	L.ROUTE_LINK = "%s (%d paradas)"
+	L.ROUTE_LINK_LINE = "Añade esta ruta: %s"
+	L.ROUTE_SHARE_SAVED = "Ruta «%s» de %s guardada. Cárgala en Gestionar rutas."
+	L.ROUTE_SHARE_ALREADY = "Ya tienes esta ruta: «%s»."
+	L.ROUTE_SHARE_GONE = "Esa ruta ya no está disponible: pide que la compartan otra vez."
 	L.IMPORT_TITLE_ROUTE = "Importar paradas en «%s»"
 	L.IMPORT_TITLE_NEW = "Importar paradas en una ruta nueva"
 	L.IMPORT_AS_NEW = "Importar como ruta nueva:"
