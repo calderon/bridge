@@ -304,6 +304,29 @@ local function Fire(event, ...)
 	end
 end
 
+-- Esc cierra solo esta ventana. (UISpecialFrames cierra todas las del juego a la vez, el mapa
+-- incluido.) En combate el juego no deja a los addons quedarse con teclas: entonces Esc sigue
+-- su camino normal.
+local HookForeignTooltips -- más abajo: oculta los tooltips ajenos que se cuelan bajo las ventanas de Bridge
+local function CloseOnEscape(frame)
+	local function Free() return not (InCombatLockdown and InCombatLockdown()) end
+	frame:EnableKeyboard(true)
+	frame:SetPropagateKeyboardInput(true)
+	frame:HookScript("OnShow", function(self)
+		if Free() then self:SetPropagateKeyboardInput(true) end
+		if HookForeignTooltips then HookForeignTooltips() end
+	end)
+	frame:SetScript("OnKeyDown", function(self, key)
+		if not Free() then return end
+		if key == "ESCAPE" then
+			self:SetPropagateKeyboardInput(false) -- que no le llegue a nadie más
+			self:Hide()
+		else
+			self:SetPropagateKeyboardInput(true) -- el resto de teclas, al juego (moverse, etc.)
+		end
+	end)
+end
+
 -- Ventana con un cuadro de texto que se puede seleccionar y copiar (Cmd+C en Mac)
 local logFrame
 local function ShowLog(lines, title)
@@ -347,7 +370,7 @@ local function ShowLog(lines, title)
 		eb:SetScript("OnEscapePressed", function() f:Hide() end)
 		sf:SetScrollChild(eb)
 		f.Edit = eb
-		table.insert(UISpecialFrames, "BridgeLogFrame") -- Esc la cierra
+		CloseOnEscape(f) -- Esc la cierra (solo a ella)
 		logFrame = f
 	end
 	logFrame.Title:SetText(title or ("Bridge " .. VERSION))
@@ -1340,7 +1363,7 @@ local function ShowImport(route)
 		f:RegisterForDrag("LeftButton")
 		f:SetScript("OnDragStart", f.StartMoving)
 		f:SetScript("OnDragStop", f.StopMovingOrSizing)
-		table.insert(UISpecialFrames, "BridgeImportFrame") -- Esc la cierra
+		CloseOnEscape(f) -- Esc la cierra (solo a ella)
 
 		local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 		title:SetPoint("TOP", 0, -18)
@@ -1466,7 +1489,7 @@ local function ShowImport(route)
 			f:Hide()
 		end)
 
-		f:SetScript("OnShow", function()
+		f:HookScript("OnShow", function() -- HookScript: no quitar lo que puso CloseOnEscape
 			f.newTouched, f.nameTouched = false, false
 			newRoute:SetChecked(false)
 			newName:SetText("")
@@ -2561,6 +2584,7 @@ local function CreateRouteRow(f, slot)
 		end
 	end
 	row.Dot:SetScript("OnClick", function(self)
+		GameTooltip:Hide() -- que no tape la confirmación
 		local route = row.route
 		if not route or route.quick then return end
 		local function Load()
@@ -2577,13 +2601,11 @@ local function CreateRouteRow(f, slot)
 	row.Dot:SetScript("OnEnter", function(self)
 		local route = row.route
 		if not route then return end
-		self:Paint(not route.quick)
-		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-		if route.quick then
-			GameTooltip:SetText(L.CURRENT_ROUTE_TIP, 1, 1, 1, 1, true)
-		else
-			GameTooltip:SetText(DB.loadedRoute == route.id and L.ROUTE_LOADED_TIP or L.ROUTE_LOAD)
-		end
+		if route.quick then return end -- el icono de la Ruta actual no lleva tooltip
+		self:Paint(true)
+		GameTooltip:SetOwner(self, "ANCHOR_NONE")
+		GameTooltip:SetPoint("LEFT", self, "RIGHT", 6, 0) -- pegado al botón, a su altura
+		GameTooltip:SetText(DB.loadedRoute == route.id and L.ROUTE_LOADED_TIP or L.ROUTE_LOAD)
 		GameTooltip:Show()
 	end)
 	row.Dot:SetScript("OnLeave", function(self)
@@ -2608,7 +2630,8 @@ local function CreateRouteRow(f, slot)
 	row:SetScript("OnEnter", function(self)
 		local route = self.route
 		if not (route and route.desc) then return end
-		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+		GameTooltip:SetOwner(self, "ANCHOR_NONE")
+		GameTooltip:SetPoint("TOPLEFT", self, "TOPRIGHT", 8, 0) -- a la altura de la fila
 		GameTooltip:SetText(route.name or "?", 1, 0.82, 0)
 		GameTooltip:AddLine(route.desc, 0.9, 0.9, 0.9, true)
 		GameTooltip:Show()
@@ -2627,7 +2650,9 @@ local function CreateManager()
 	end
 	f:SetSize(720, 440)
 	f:SetPoint("CENTER")
-	f:SetFrameStrata("FULLSCREEN_DIALOG")
+	-- La capa de las ventanas normales del juego (y del mapa): la última que abras o pulses
+	-- queda delante, como entre las ventanas del juego
+	f:SetFrameStrata("MEDIUM")
 	f:SetToplevel(true)
 	f:SetClampedToScreen(true)
 	f.styled = styled
@@ -2673,7 +2698,7 @@ local function CreateManager()
 	f:RegisterForDrag("LeftButton")
 	f:SetScript("OnDragStart", f.StartMoving)
 	f:SetScript("OnDragStop", f.StopMovingOrSizing)
-	table.insert(UISpecialFrames, "BridgeManagerFrame") -- Esc la cierra
+	CloseOnEscape(f) -- Esc la cierra (solo a ella, no el mapa)
 
 	-- Con el marco del juego, cada columna va en un panel hundido (como el del personaje)
 	if styled then
@@ -3099,7 +3124,10 @@ local function CreateManager()
 		self.Hint:SetText(L.MANAGER_HINT)
 	end
 
-	f:SetScript("OnShow", function(self) self:Refresh() end)
+	f:HookScript("OnShow", function(self)
+		self:Raise() -- al abrirla, delante de las demás ventanas (mapa incluido)
+		self:Refresh()
+	end) -- HookScript: no quitar lo de CloseOnEscape
 	-- Al cerrar la ventana, también la confirmación que hubiera abierta
 	f:SetScript("OnHide", function() if confirmBox then confirmBox:Hide() end end)
 	-- Las ventanas nuevas nacen visibles: la dejamos oculta hasta que se abra
@@ -4199,6 +4227,92 @@ do
 			Print("  " .. L.HELP_DEV:format(W.copy))
 			Print(L.HELP_MAP)
 		end
+	end
+end
+
+-- Algunos tooltips salen según la posición del cursor, aunque haya una ventana encima: el de
+-- los iconos del mapa de Leatrix Maps (LeaMapsPOITooltip) y, a veces, el normal del juego.
+do
+	local function BridgeWindows()
+		return { managerFrame, importFrame, logFrame, confirmBox, nameBox }
+	end
+	local function OverBridgeWindow()
+		for _, w in ipairs(BridgeWindows()) do
+			if w and w:IsShown() and w:IsMouseOver() then return true end
+		end
+		return false
+	end
+	-- ¿Este marco está dentro de una ventana de Bridge? (entonces su tooltip es nuestro)
+	local function IsOurs(frame)
+		local windows = BridgeWindows()
+		while frame do
+			for _, w in ipairs(windows) do
+				if frame == w then return true end
+			end
+			frame = frame.GetParent and frame:GetParent()
+		end
+		return false
+	end
+	-- El tooltip normal: se oculta en el momento en que aparece
+	local hooked = false
+	local function HookGameTooltip()
+		if hooked then return end
+		hooked = true
+		GameTooltip:HookScript("OnShow", function(self)
+			if OverBridgeWindow() and not IsOurs(self:GetOwner()) then self:Hide() end
+		end)
+	end
+
+	-- El de Leatrix Maps se queda abierto y solo cambia de texto y sitio. Mientras el ratón está
+	-- sobre una ventana de Bridge: cada vez que Leatrix lo toca (Show, SetText, SetOwner) se oculta,
+	-- y en cada fotograma se comprueba que siga invisible. El vigilante solo funciona mientras hay
+	-- alguna ventana de Bridge abierta; después devuelve la visibilidad y se apaga del todo.
+	local function AnyBridgeWindow()
+		for _, w in ipairs({ managerFrame, importFrame, logFrame }) do
+			if w and w:IsShown() then return true end
+		end
+		return false
+	end
+	local leaHooked, faded = nil, false
+	local function HookLeatrix()
+		local tip = _G.LeaMapsPOITooltip
+		if not tip or leaHooked == tip then return end
+		leaHooked = tip
+		local function Hush(self)
+			if OverBridgeWindow() then
+				self:SetAlpha(0)
+				faded = true
+			end
+		end
+		for _, method in ipairs({ "Show", "SetText", "SetOwner", "AddLine" }) do
+			if type(tip[method]) == "function" then hooksecurefunc(tip, method, Hush) end
+		end
+		if tip.HookScript then tip:HookScript("OnShow", Hush) end
+	end
+	local watcher = CreateFrame("Frame")
+	watcher:SetScript("OnUpdate", function()
+		local tip = _G.LeaMapsPOITooltip
+		if not AnyBridgeWindow() then
+			if faded and tip then tip:SetAlpha(1) end
+			faded = false
+			watcher:Hide() -- apagado hasta que se abra otra ventana de Bridge
+			return
+		end
+		if not tip then return end
+		HookLeatrix()
+		if OverBridgeWindow() then
+			if tip:GetAlpha() > 0 then tip:SetAlpha(0) end
+			faded = true
+		elseif faded then
+			tip:SetAlpha(1)
+			faded = false
+		end
+	end)
+	watcher:Hide()
+
+	function HookForeignTooltips()
+		HookGameTooltip()
+		watcher:Show() -- en marcha mientras haya ventanas de Bridge abiertas
 	end
 end
 
