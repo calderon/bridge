@@ -1077,18 +1077,19 @@ local function StopLink(s)
 	return link
 end
 
-local function ShareStop(s, channel)
+-- target: a quién se susurra (solo con channel = "WHISPER")
+local function ShareStop(s, channel, target)
 	local where = string.format("(%s %.1f, %.1f)", s.zone or "?", s.x * 100, s.y * 100)
 	local link = StopLink(s)
 	local msg = link and (link .. " " .. s.name .. " " .. where) or (s.name .. " " .. where)
-	if not pcall(SendChatMessage, msg, channel) and channel == "INSTANCE_CHAT" then
+	if not pcall(SendChatMessage, msg, channel, nil, target) and channel == "INSTANCE_CHAT" then
 		channel = "BATTLEGROUND"
 		pcall(SendChatMessage, msg, channel)
 	end
 	-- Quien tenga Bridge la recibe además como parada (con la pregunta de si la quiere)
 	if C_ChatInfo and C_ChatInfo.SendAddonMessage then
 		local payload = string.format("1\t%d\t%.4f\t%.4f\t%s", s.mapID, s.x, s.y, ((s.name or ""):gsub("\t", " ")))
-		pcall(C_ChatInfo.SendAddonMessage, "Bridge", payload:sub(1, 250), channel)
+		pcall(C_ChatInfo.SendAddonMessage, "Bridge", payload:sub(1, 250), channel, target)
 	end
 	Print(L.STOP_SHARED:format(s.name))
 end
@@ -1126,7 +1127,8 @@ do
 		return ((text or ""):gsub("[\t\r\n|]", " "))
 	end
 
-	-- Canales en los que estás (para el menú de compartir)
+	-- Canales en los que estás (menú de compartir de las rutas y de las paradas):
+	-- onPick(what, canal, objetivo) se llama con lo elegido
 	function ShareChannels(route, onPick)
 		local items = {}
 		local _, instanceType = IsInInstance()
@@ -2363,10 +2365,6 @@ end
 OpenStopMenu = function(pin)
 	local s = pin.stop
 	if not (pin.index and s) then return end
-	local inGroup = IsInGroup and IsInGroup()
-	local inRaid = IsInRaid and IsInRaid()
-	local _, instanceType = IsInInstance()
-	local inGuild = IsInGuild and IsInGuild()
 	ShowMenu(pin, {
 		{ text = s.name, title = true },
 		{ text = L.MENU_RENAME, func = function()
@@ -2377,12 +2375,7 @@ OpenStopMenu = function(pin)
 				end
 			end, s.desc)
 		end },
-		{ text = L.MENU_SHARE, sub = {
-			{ text = L.SHARE_PARTY, disabled = not inGroup, func = function() ShareStop(s, "PARTY") end },
-			{ text = L.SHARE_RAID, disabled = not inRaid, func = function() ShareStop(s, "RAID") end },
-			{ text = L.SHARE_BATTLEGROUND, disabled = instanceType ~= "pvp", func = function() ShareStop(s, "INSTANCE_CHAT") end },
-			{ text = L.SHARE_GUILD, disabled = not inGuild, func = function() ShareStop(s, "GUILD") end },
-		} },
+		{ text = L.MENU_SHARE, sub = ShareChannels(s, ShareStop) },
 		{ text = L.MENU_REMOVE, func = function()
 			for i, st in ipairs(Stops()) do
 				if st == s then RemoveStop(i) return end
