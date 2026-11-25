@@ -4269,11 +4269,12 @@ do
 		return true
 	end
 
-	-- Crear una ruta guardada vacía. Devuelve su id (el nombre puede llevar " (2)" si ya existía)
-	function API.CreateRoute(name)
+	-- Crear una ruta guardada vacía, con descripción opcional. Devuelve su id (el nombre
+	-- puede llevar " (2)" si ya existía)
+	function API.CreateRoute(name, description)
 		name = CleanName(name)
 		if not (DB and name) then return nil end
-		return CreateRoute(name).id
+		return CreateRoute(name, description).id
 	end
 
 	-- Reiniciar la Ruta actual: ninguna parada alcanzada, se vuelve a la primera

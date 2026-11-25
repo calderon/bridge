@@ -69,7 +69,7 @@ Una ruta guardada devuelta por la API (versión 2) tiene estos campos:
 | `BridgeAPI.GetRoutes()` | lista | Las rutas guardadas, por orden alfabético (versión 2) |
 | `BridgeAPI.GetLoadedRoute()` | ruta o `nil` | La última ruta guardada cargada en la Ruta actual, con `modified` (versión 2) |
 | `BridgeAPI.LoadRoute(id)` | `true`/`false` | Carga una ruta guardada en la Ruta actual, sustituyendo sus paradas (tu cadáver se queda) (versión 2) |
-| `BridgeAPI.CreateRoute(nombre)` | `id` o `nil` | Crea una ruta guardada vacía (versión 2) |
+| `BridgeAPI.CreateRoute(nombre [, descripción])` | `id` o `nil` | Crea una ruta guardada vacía, con descripción opcional (versión 2) |
 | `BridgeAPI.RestartRoute()` | — | Reinicia la Ruta actual: vuelve a la primera parada (versión 2) |
 | `BridgeAPI.RegisterCallback(dueño, evento, fn)` | `true`/`false` | Escuchar un evento |
 | `BridgeAPI.UnregisterCallback(dueño [, evento])` | — | Dejar de escuchar uno o todos |
@@ -200,7 +200,7 @@ A saved route returned by the API (version 2) has these fields:
 | `BridgeAPI.GetRoutes()` | list | The saved routes, in alphabetical order (version 2) |
 | `BridgeAPI.GetLoadedRoute()` | route or `nil` | The last saved route loaded into the Current route, with `modified` (version 2) |
 | `BridgeAPI.LoadRoute(id)` | `true`/`false` | Loads a saved route into the Current route, replacing its stops (your corpse stays) (version 2) |
-| `BridgeAPI.CreateRoute(name)` | `id` or `nil` | Creates an empty saved route (version 2) |
+| `BridgeAPI.CreateRoute(name [, description])` | `id` or `nil` | Creates an empty saved route, with an optional description (version 2) |
 | `BridgeAPI.RestartRoute()` | — | Restarts the Current route: back to the first stop (version 2) |
 | `BridgeAPI.RegisterCallback(owner, event, fn)` | `true`/`false` | Listen to an event |
 | `BridgeAPI.UnregisterCallback(owner [, event])` | — | Stop listening to one or all events |
