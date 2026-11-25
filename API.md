@@ -34,7 +34,7 @@ Una parada devuelta por la API tiene estos campos:
 | `name` | Nombre |
 | `zone` | Nombre de la zona |
 | `mapID`, `x`, `y` | Zona y coordenadas (0–1) |
-| `source` | Quién la añadió, si se indicó (`"Questie"`, `"/way"`, el nombre de tu addon…) |
+| `source` | Quién la añadió, si se indicó (`"Questie"`, `"/way"`, `"import"`, el nombre del jugador que la compartió, el nombre de tu addon…) |
 | `description` | Descripción, si tiene (sale en el tooltip) |
 | `reached` | `true` si ya se ha llegado a ella en el recorrido (sigue guardada en su ruta) |
 
@@ -69,8 +69,8 @@ Una ruta guardada devuelta por la API (versión 2) tiene estos campos:
 | `BridgeAPI.GetRoutes()` | lista | Las rutas guardadas, por orden alfabético (versión 2) |
 | `BridgeAPI.GetLoadedRoute()` | ruta o `nil` | La última ruta guardada cargada en la Ruta actual, con `modified` (versión 2) |
 | `BridgeAPI.LoadRoute(id)` | `true`/`false` | Carga una ruta guardada en la Ruta actual, sustituyendo sus paradas (tu cadáver se queda) (versión 2) |
-| `BridgeAPI.CreateRoute(nombre [, descripción])` | `id` o `nil` | Crea una ruta guardada vacía, con descripción opcional (versión 2) |
-| `BridgeAPI.RestartRoute()` | — | Reinicia la Ruta actual: vuelve a la primera parada (versión 2) |
+| `BridgeAPI.CreateRoute(nombre [, descripción])` | `id` o `nil` | Crea una ruta guardada vacía, con descripción opcional; escribe una línea en el chat (versión 2) |
+| `BridgeAPI.RestartRoute()` | — | Reinicia la Ruta actual: vuelve a la primera parada; no lanza ningún evento (versión 2) |
 | `BridgeAPI.RegisterCallback(dueño, evento, fn)` | `true`/`false` | Escuchar un evento |
 | `BridgeAPI.UnregisterCallback(dueño [, evento])` | — | Dejar de escuchar uno o todos |
 
@@ -88,7 +88,7 @@ Las paradas añadidas por la API **nunca** muestran la cajita para poner nombre.
 
 ### Eventos
 
-`fn(evento, parada)` se llama tras cada cambio, venga de donde venga (el mapa, la ventana Gestionar rutas, Questie, un `/way`, la llegada a una parada en AzerothGPS u otro addon). `parada` es una copia.
+`fn(evento, parada)` se llama tras cada cambio en la **Ruta actual**, venga de donde venga (el mapa, la ventana Gestionar rutas, Questie, un `/way`, la llegada a una parada en AzerothGPS u otro addon). `parada` es una copia. Los cambios en las rutas guardadas no lanzan eventos, ni tampoco reiniciar la ruta.
 
 | Evento | Cuándo | `parada` |
 |---|---|---|
@@ -165,7 +165,7 @@ A stop returned by the API has these fields:
 | `name` | Name |
 | `zone` | Zone name |
 | `mapID`, `x`, `y` | Zone and coordinates (0–1) |
-| `source` | Who added it, if given (`"Questie"`, `"/way"`, your addon's name…) |
+| `source` | Who added it, if given (`"Questie"`, `"/way"`, `"import"`, the name of the player who shared it, your addon's name…) |
 | `description` | Description, if any (shown in the tooltip) |
 | `reached` | `true` if it has already been reached in the current walk (it stays saved in its route) |
 
@@ -200,8 +200,8 @@ A saved route returned by the API (version 2) has these fields:
 | `BridgeAPI.GetRoutes()` | list | The saved routes, in alphabetical order (version 2) |
 | `BridgeAPI.GetLoadedRoute()` | route or `nil` | The last saved route loaded into the Current route, with `modified` (version 2) |
 | `BridgeAPI.LoadRoute(id)` | `true`/`false` | Loads a saved route into the Current route, replacing its stops (your corpse stays) (version 2) |
-| `BridgeAPI.CreateRoute(name [, description])` | `id` or `nil` | Creates an empty saved route, with an optional description (version 2) |
-| `BridgeAPI.RestartRoute()` | — | Restarts the Current route: back to the first stop (version 2) |
+| `BridgeAPI.CreateRoute(name [, description])` | `id` or `nil` | Creates an empty saved route, with an optional description; prints a line in chat (version 2) |
+| `BridgeAPI.RestartRoute()` | — | Restarts the Current route: back to the first stop; fires no event (version 2) |
 | `BridgeAPI.RegisterCallback(owner, event, fn)` | `true`/`false` | Listen to an event |
 | `BridgeAPI.UnregisterCallback(owner [, event])` | — | Stop listening to one or all events |
 
@@ -219,7 +219,7 @@ Stops added through the API **never** show the naming box.
 
 ### Events
 
-`fn(event, stop)` is called after every change, wherever it comes from (the map, the Manage routes window, Questie, a `/way`, arriving at a stop in AzerothGPS, or another addon). `stop` is a copy.
+`fn(event, stop)` is called after every change to the **Current route**, wherever it comes from (the map, the Manage routes window, Questie, a `/way`, arriving at a stop in AzerothGPS, or another addon). `stop` is a copy. Changes to saved routes fire no events, and neither does restarting the route.
 
 | Event | When | `stop` |
 |---|---|---|
