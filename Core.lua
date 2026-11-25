@@ -3255,8 +3255,15 @@ local function CreateManager()
 
 	f:HookScript("OnShow", function(self)
 		self:Raise() -- al abrirla, delante de las demás ventanas (mapa incluido)
+		-- Si se abre con el mapa abierto, se cierra con él; si no, va por libre
+		self.withMap = WorldMapFrame and WorldMapFrame:IsShown()
 		self:Refresh()
 	end) -- HookScript: no quitar lo de CloseOnEscape
+	if WorldMapFrame then
+		WorldMapFrame:HookScript("OnHide", function()
+			if f:IsShown() and f.withMap then f:Hide() end
+		end)
+	end
 	-- Al cerrar la ventana, también la confirmación que hubiera abierta
 	f:SetScript("OnHide", function() if confirmBox then confirmBox:Hide() end end)
 	-- Las ventanas nuevas nacen visibles: la dejamos oculta hasta que se abra
